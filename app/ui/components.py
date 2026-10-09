@@ -37,7 +37,10 @@ def render_account_menu(profile: Profile) -> None:
 
 def render_header() -> None:
     badge = ' <span class="tcb-badge">Demo</span>' if demo_enabled() else ""
-    st.markdown(f'<div class="tcb-title">{APP_TITLE}{badge}</div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="tcb-brand"><span class="tcb-title">{APP_TITLE}</span>{badge}</div>',
+        unsafe_allow_html=True,
+    )
     with st.expander("How To Guide", expanded=False):
         st.markdown(_howto_markdown())
 

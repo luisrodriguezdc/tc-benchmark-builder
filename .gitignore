@@ -1,6 +1,8 @@
 .env
 .env.local
 .streamlit/secrets.toml
+DEPLOYMENT.local.md
+backups/
 .venv/
 venv/
 .pg/

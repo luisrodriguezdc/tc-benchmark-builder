@@ -2,6 +2,7 @@ CSS = """
 <style>
 :root { --tcb-primary: #3697b3; --tcb-text: #31333f; --tcb-line: rgba(49, 51, 63, 0.2); }
 .block-container { padding-top: 1.15rem; padding-bottom: 4.5rem; max-width: 1100px; }
+.tcb-brand { margin: 0 0 0.4rem; line-height: 1.35; }
 .tcb-title { font-size: 1.35rem; font-weight: 700; margin-bottom: 0.35rem; line-height: 1.3; color: #1f2328; }
 .tcb-badge {
   display: inline-block; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.06em;
@@ -130,10 +131,28 @@ div[data-testid="stSelectbox"] [data-baseweb="select"] input {
 """
 
 
+def _on_streamlit_cloud() -> bool:
+    import os
+    from pathlib import Path
+
+    return bool(
+        os.environ.get("STREAMLIT_SHARING_MODE")
+        or os.environ.get("STREAMLIT_CLOUD")
+        or Path("/mount/src").exists()
+    )
+
+
 def inject() -> None:
     import streamlit as st
 
-    st.markdown(CSS, unsafe_allow_html=True)
+    css = CSS
+    if _on_streamlit_cloud():
+        # Community Cloud's Share/star bar covers the first ~3rem of the main pane.
+        css = css.replace(
+            ".block-container { padding-top: 1.15rem;",
+            ".block-container { padding-top: 4.4rem;",
+        )
+    st.markdown(css, unsafe_allow_html=True)
 
 
 def status_pill(status: str) -> str:
