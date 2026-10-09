@@ -1,0 +1,7 @@
+candidate_id,segment_id,sample_order,source_language_code,target_language_code,source,target,perturbed_target,error_type,requested_severity,mechanism
+c-a-mis,seg-a,1,en,es-ES,Hello world,Hola mundo,Hola planeta,Mistranslation,Major,test
+c-a-add,seg-a,1,en,es-ES,Hello world,Hola mundo,Hola gran mundo,Addition,Minor,test
+c-a-omi,seg-a,1,en,es-ES,Hello world,Hola mundo,Hola,Omission,Major,test
+c-b-mis,seg-b,2,en,es-ES,Goodbye,Adiós,Hola,Mistranslation,Major,test
+c-b-add,seg-b,2,en,es-ES,Goodbye,Adiós,Adiós amigo,Addition,Minor,test
+c-b-omi,seg-b,2,en,es-ES,Goodbye,Adiós,Adi,Omission,Major,test
