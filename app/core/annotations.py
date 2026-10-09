@@ -54,6 +54,23 @@ def save_annotation(
     return data or {}
 
 
+def flag_source_error(
+    client: Client,
+    *,
+    batch_id: str,
+    segment_id: str,
+    flagged: bool,
+) -> None:
+    client.rpc(
+        "flag_source_error",
+        {
+            "p_batch_id": batch_id,
+            "p_segment_id": segment_id,
+            "p_flagged": flagged,
+        },
+    ).execute()
+
+
 def submit_suggestion(
     client: Client,
     *,
@@ -175,6 +192,8 @@ def load_workspace(client: Client, batch_id: str, annotator_id: str) -> dict[str
 def annotation_counts(items: list[dict]) -> dict[str, int]:
     validated = rejected = incomplete = 0
     for item in items:
+        if (item.get("item") or {}).get("source_error"):
+            continue
         for cand in item["candidates"]:
             ann = item["annotations"].get(cand["id"])
             status = (ann or {}).get("status") or "draft"

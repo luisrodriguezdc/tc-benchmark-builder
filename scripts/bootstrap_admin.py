@@ -19,8 +19,8 @@ from app.core.config import get_settings
 
 def main() -> None:
     settings = get_settings()
-    if not settings.supabase_service_role_key:
-        sys.exit("SUPABASE_SERVICE_ROLE_KEY is required.")
+    if not settings.supabase_secret_key:
+        sys.exit("SUPABASE_SECRET_KEY is required.")
     email = os.environ.get("ADMIN_EMAIL") or (sys.argv[1] if len(sys.argv) > 1 else "")
     name = os.environ.get("ADMIN_DISPLAY_NAME") or (sys.argv[2] if len(sys.argv) > 2 else "Admin")
     if not email:

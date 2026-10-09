@@ -1,0 +1,1444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="description" content="Demo of the Translation Commons Benchmark Builder. Annotations stay in this browser and are not saved to the live database.">
+<title>Translation Commons Benchmark Builder — Demo</title>
+<style>
+  :root {
+    --text: #31333f;
+    --muted: #5c616c;
+    --line: rgba(49, 51, 63, 0.2);
+    --primary: #3697b3;
+    --yellow: #f6e28b;
+    --ink: #1f2328;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    color: var(--text);
+    background: #fff;
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.45;
+  }
+  button, select, textarea, input { font: inherit; color: inherit; }
+  button:focus-visible, select:focus-visible, textarea:focus-visible, input:focus-visible {
+    outline: 2px solid #3697b3;
+    outline-offset: 2px;
+  }
+  .reset-dock {
+    position: fixed;
+    right: 1.25rem;
+    bottom: 1.25rem;
+    z-index: 20;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 0.5rem;
+    min-height: 38px;
+    padding: 0.4rem 0.9rem;
+    cursor: pointer;
+    box-shadow: 0 2px 10px rgba(49, 51, 63, 0.14);
+  }
+  .reset-dock:hover { border-color: var(--primary); color: var(--primary); }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 1.15rem 1rem 4.5rem; }
+  .pill {
+    display: inline-block;
+    border-radius: 999px;
+    padding: 0.12rem 0.55rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .pill-wip { background: #fff6e0; color: #6b4e00; }
+  .pill-new { background: #e8f1fb; color: #0f3a5f; }
+  .pill-done { background: #e7f6ec; color: #146c36; }
+  button.claim { white-space: nowrap; }
+  .app-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 250px;
+    gap: 1rem;
+    align-items: start;
+    margin-bottom: 0.85rem;
+  }
+  h1 { font-size: 1.35rem; font-weight: 700; margin: 0 0 0.35rem; line-height: 1.3; }
+  h2 { font-size: 1.12rem; font-weight: 700; margin: 0.15rem 0 0.55rem; }
+  h3 { font-size: 1rem; margin: 0.85rem 0 0.3rem; }
+  .badge {
+    display: inline-block;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: var(--yellow);
+    color: #5c4b12;
+    border-radius: 999px;
+    padding: 0.12rem 0.45rem;
+    vertical-align: middle;
+    margin-left: 0.15rem;
+  }
+  .userbox {
+    border: 1px solid #c5c9ce;
+    border-radius: 6px;
+    padding: 0.55rem 0.75rem;
+    font-size: 0.85rem;
+    background: #fff;
+    line-height: 1.45;
+  }
+  .guide {
+    border: 1px solid var(--line);
+    border-radius: 0.5rem;
+    padding: 0.45rem 0.8rem 0.55rem;
+    background: #fff;
+  }
+  .guide summary { cursor: pointer; font-weight: 700; }
+  .guide ul, .guide ol { margin: 0.25rem 0 0.55rem; padding-left: 1.2rem; }
+  .guide p { margin: 0.35rem 0; }
+  .field { display: flex; flex-direction: column; gap: 0.28rem; font-size: 0.92rem; font-weight: 700; margin: 0.35rem 0 0.7rem; }
+  .field span { font-weight: 700; }
+  .check { display: flex; align-items: center; gap: 0.45rem; font-weight: 600; margin: 0.2rem 0 0.7rem; }
+  select, textarea, input[type="text"] {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 0.5rem;
+    padding: 0.45rem 0.65rem;
+    background: #fff;
+    min-height: 38px;
+    font-weight: 400;
+    color: #000;
+  }
+  select option { color: #000; }
+  select.pill {
+    width: auto;
+    border-radius: 999px;
+    padding: 0.1rem 1.7rem 0.1rem 0.75rem;
+    min-height: 0;
+    height: 30px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #000;
+    background: #fff;
+  }
+  textarea { min-height: 90px; resize: vertical; line-height: 1.45; }
+  button.primary, button.secondary {
+    border-radius: 0.5rem;
+    padding: 0.4rem 0.85rem;
+    min-height: 38px;
+    cursor: pointer;
+  }
+  button.primary { background: var(--primary); color: #fff; border: 1px solid var(--primary); }
+  button.primary:hover:not(:disabled) { background: #2c7f98; border-color: #2c7f98; }
+  button.secondary { background: #fff; color: var(--text); border: 1px solid var(--line); }
+  button.secondary:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+  button.tiny { min-height: 32px; padding: 0.15rem 0.6rem; font-size: 0.88rem; }
+  button.reject {
+    width: 34px; height: 34px; min-height: 34px; padding: 0;
+    border-radius: 0.5rem; border: 1px solid var(--line); background: #fff;
+    cursor: pointer; font-size: 1.15rem; line-height: 1;
+  }
+  button.linkish {
+    background: #fff; border: 1px solid var(--line); border-radius: 0.5rem;
+    min-height: 34px; padding: 0.25rem 0.7rem; cursor: pointer; font-weight: 700;
+  }
+  .alert { border-radius: 0.5rem; padding: 0.7rem 0.85rem; margin: 0.45rem 0 0.75rem; }
+  .alert.info { background: #e8f1fb; color: #0f3a5f; }
+  .alert.warn { background: #fff6e0; color: #6b4e00; }
+  .alert.err { background: #fde8e8; color: #8a1c13; }
+  .alert.ok { background: #e7f6ec; color: #146c36; }
+  hr { border: 0; border-top: 1px solid rgba(49, 51, 63, 0.15); margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; margin: 0.2rem 0 0.8rem; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+  th, td { text-align: left; padding: 0.48rem 0.4rem; border-bottom: 1px solid rgba(49, 51, 63, 0.12); vertical-align: middle; }
+  th { font-weight: 700; }
+  .caption { color: var(--muted); font-size: 0.8rem; margin: 0.3rem 0; }
+  .counts { color: var(--muted); font-size: 0.92rem; margin: 0.45rem 0 0.15rem; }
+  #saveStatus { min-height: 1.2rem; font-size: 0.85rem; margin: 0.1rem 0 0.45rem; }
+  .save-ok { color: #1b7f3a; }
+  .save-fail { color: #b42318; }
+  .segment-banner {
+    background: #d4eef6;
+    border-radius: 6px;
+    padding: 0.9rem 1.1rem;
+    margin: 0.45rem 0 0.85rem;
+    text-align: center;
+  }
+  .segment-banner .progress { font-size: 0.8rem; color: #000; margin-bottom: 0.45rem; text-align: center; }
+  .segment-banner .k {
+    font-size: 0.72rem; letter-spacing: 0.05em; text-transform: uppercase;
+    color: #000; font-weight: 700; margin-top: 0.35rem;
+  }
+  .sentence {
+    font-size: 1.05rem;
+    font-weight: 600;
+    line-height: 1.5;
+    text-align: center;
+    color: #000;
+    min-height: 3rem;
+  }
+  .segment-banner .line { margin: 0.12rem 0 0.2rem; }
+  .card {
+    border: 1px solid var(--line);
+    border-radius: 0.5rem;
+    padding: 0.75rem 0.85rem 0.65rem;
+    margin: 0.75rem 0;
+    background: #fff;
+    color: #000;
+  }
+  .card-top { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; margin-bottom: 0.55rem; }
+  .pills { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
+  .card-state { font-size: 0.82rem; font-weight: 700; color: #000; }
+  .card-actions { display: flex; gap: 0.35rem; align-items: center; }
+  .card-foot { display: flex; justify-content: flex-end; margin-top: 0.45rem; }
+  .card-foot button { width: auto; }
+  .card textarea.sentence { width: 100%; min-height: 90px; font-weight: 600; }
+  button.icon-btn {
+    width: 34px; height: 34px; min-height: 34px; padding: 0;
+    border-radius: 0.5rem; border: 1px solid var(--line); background: #fff;
+    cursor: pointer; font-size: 1rem; line-height: 1;
+  }
+  button.icon-btn.active { border-color: var(--primary); background: #e7f4f8; }
+  button.icon-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .status-validated { color: #000; font-weight: 700; }
+  .status-rejected { color: #000; font-weight: 700; }
+  .span-preview { padding: 0.35rem 0.4rem; }
+  .span-preview em { font-style: italic; color: var(--muted); font-weight: 700; }
+  .span-note { font-size: 0.75rem; color: #9a3412; margin: 0.1rem 0 0.3rem; }
+  .err-span {
+    text-decoration: underline;
+    text-decoration-color: #3697b3;
+    text-underline-offset: 3px;
+    text-decoration-thickness: 2px;
+  }
+  .err-span.strike {
+    text-decoration: line-through;
+    text-decoration-color: #3697b3;
+    text-decoration-thickness: 2px;
+  }
+  .err-span.approx { opacity: 0.85; }
+  .controls, .nav, .split { display: grid; gap: 0.5rem; }
+  .controls, .nav { grid-template-columns: 1fr 1fr 1fr; align-items: center; }
+  .split { grid-template-columns: 1fr 1fr; }
+  .nav { margin-top: 0.35rem; }
+  .nav button, .controls button.primary, .controls button.secondary { width: 100%; }
+  .suggest { margin-top: 0.9rem; }
+  .suggest-item { padding: 0.35rem 0; border-top: 1px solid rgba(49, 51, 63, 0.1); }
+  .footer {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 1rem 4.5rem;
+    color: var(--muted);
+    font-size: 0.82rem;
+  }
+  @media (max-width: 720px) {
+    .app-header { display: block; }
+    .userbox { margin-top: 0.75rem; }
+    .controls, .nav, .split { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<main class="wrap" id="app"></main>
+<button type="button" id="resetBtn" class="reset-dock">Reset Demo</button>
+<footer class="footer">Standalone demo for sharing (for example on Tiiny Host). It is separate from the Streamlit application and does not connect to Supabase.</footer>
+<noscript><p class="wrap">This demo needs JavaScript. It still does not connect to a server.</p></noscript>
+<script id="pilot-data" type="application/json">{"pairLabel":"English → Spanish","targetLabel":"Spanish","dataset":"Mentoring Guidelines v3 (pilot)","batchSize":100,"segments":[{"id":"4216ac4179e93f01","order":1,"source":"Mentoring Guidelines for Indigenous Translators and Interpreters by Translation Commons","reference":"Guías de formación para traductores e intérpretes indígenas por Translation Commons","candidates":[{"id":"3a91c8f4-307a-525c-a882-56bd19ea648d","text":"Guías de formación para traductores e intérpretes no indígenas por Translation Commons","type":"Mistranslation","severity":"Major","ts":50,"te":53,"rs":null,"re":null,"ip":null},{"id":"18cf9f5b-c35e-5564-b03b-55abe2650784","text":"Guías de mentoría aborígen para traductores e intérpretes indígenas por Translation Commons","type":"Addition","severity":"Major","ts":17,"te":25,"rs":null,"re":null,"ip":null},{"id":"1b3ad096-a8ac-5fa7-a13d-7a3e0b1e67ef","text":"Guías de formación para traductores e intérpretes indígenas","type":"Omission","severity":"Major","ts":null,"te":null,"rs":59,"re":83,"ip":59}]},{"id":"049d1365dfaf2760","order":2,"source":"Resources like the European Commission’s Speech Repository and free archives can be useful, alongside community-based content such as recordings of meetings, ceremonies, or storytelling sessions.","reference":"Pueden ser útiles recursos como el repositorio de discursos de la Comisión Europea y archivos gratuitos, junto con contenidos comunitarios como grabaciones de reuniones, ceremonias o sesiones de cuentacuentos.","candidates":[{"id":"56be1c3e-6bec-525d-b083-96199836e45a","text":"Pueden ser útiles recursos como el repositorio de discursos de la Comisión Europea y archivos no gratuitos, junto con contenidos comunitarios como grabaciones de reuniones, ceremonias o sesiones de cuentacuentos.","type":"Mistranslation","severity":"Major","ts":93,"te":96,"rs":null,"re":null,"ip":null},{"id":"60b6af82-94b1-5c4c-a7b6-78507b8a174f","text":"Pueden ser útiles recursos en línea como el repositorio de discursos de la Comisión Europea y archivos gratuitos, junto con contenidos comunitarios como grabaciones de reuniones, ceremonias o sesiones de cuentacuentos.","type":"Addition","severity":"Minor","ts":26,"te":35,"rs":null,"re":null,"ip":null},{"id":"30f0c3e7-08d4-58da-a72b-c8b7ae271a26","text":"Pueden ser útiles recursos como el repositorio de discursos de la Comisión Europea y archivos, junto con contenidos comunitarios como grabaciones de reuniones, ceremonias o sesiones de cuentacuentos.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":91,"re":101,"ip":91}]},{"id":"6cb9aefa5fb3a656","order":3,"source":"With good organization and clear guidance, mentoring teams—whether large or small—can provide a rich, supportive environment for Indigenous language professionals to grow and thrive.","reference":"Con una buena organización y una guía clara, los equipos de orientación, ya sean grandes o pequeños, pueden proporcionar un entorno rico y de apoyo para que los profesionales de las lenguas indígenas crezcan y prosperen.","candidates":[{"id":"a4727b63-c90b-5d85-bd05-782598885c95","text":"Con una buena organización y una guía clara, los equipos de mentoría, ya sean grandes o pequeños, pueden cultivar un entorno rico y de apoyo para que los profesionales de las lenguas indígenas crezcan y prosperen.","type":"Mistranslation","severity":"Major","ts":60,"te":61,"rs":60,"re":63,"ip":null},{"id":"0b9cce7a-d2c2-52bc-b8dd-f6bc93993f5b","text":"Con una buena organización regional y una guía clara, los equipos de orientación, ya sean grandes o pequeños, pueden proporcionar un entorno rico y de apoyo para que los profesionales de las lenguas indígenas crezcan y prosperen.","type":"Addition","severity":"Major","ts":26,"te":35,"rs":null,"re":null,"ip":null},{"id":"76e09c82-a2ea-5832-a4e3-cc952ff686c5","text":"Con una buena organización y una guía clara, los equipos de orientación, ya sean grandes o pequeños, pueden proporcionar un entorno rico y de apoyo para que los profesionales crezcan y prosperen.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":175,"re":200,"ip":175}]},{"id":"834bdfa9ca78ae9d","order":4,"source":"Mentors may also assess mentees through discussions, tests, or work samples to identify development needs and confirm their ability to guide mentees toward their goals, ensuring mutual confidence in continuing the mentorship.","reference":"Los mentores también pueden evaluar a los alumnos a través de conversaciones, pruebas o muestras de trabajo para identificar las necesidades de desarrollo y confirmar su capacidad para guiar a los alumnos hacia sus objetivos, asegurando la confianza mutua en la continuación de la tutoría.","candidates":[{"id":"3d2ec019-cd76-5b6b-a733-e68d3e1c821c","text":"Los mentores también pueden acercarse a los alumnos a través de conversaciones, pruebas o muestras de trabajo para identificar las necesidades de desarrollo y confirmar su capacidad para guiar a los alumnos hacia sus objetivos, asegurando la confianza mutua en la continuación de la tutoría.","type":"Mistranslation","severity":"Minor","ts":31,"te":33,"rs":29,"re":33,"ip":null},{"id":"bd3e72b6-004c-5e9f-831a-f9a22a3824a0","text":"Los mentores también pueden cuidadosamente evaluar a los alumnos a través de conversaciones, pruebas o muestras de trabajo para identificar las necesidades de desarrollo y confirmar su capacidad para guiar a los alumnos hacia sus objetivos, asegurando la confianza mutua en la continuación de la tutoría.","type":"Addition","severity":"Minor","ts":27,"te":42,"rs":null,"re":null,"ip":null},{"id":"bd4079f9-9e6c-5128-bc25-a9eb8fe3ae73","text":"Los mentores también pueden evaluar a los alumnos para identificar las necesidades de desarrollo y confirmar su capacidad para guiar a los alumnos hacia sus objetivos, asegurando la confianza mutua en la continuación de la tutoría.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":49,"re":107,"ip":49}]},{"id":"27567f87ce86113c","order":5,"source":"They are not prescriptive, but adaptable to a community’s specific goals, capacity, and resources.","reference":"No son prescriptivas, sino adaptables a los objetivos, capacidad y recursos específicos de cada comunidad.","candidates":[{"id":"8e40b63f-f143-588f-a215-eed51742374f","text":"No son prescriptivas, sino adaptables a los objetivos, capacidad y recursos no específicos de cada comunidad.","type":"Mistranslation","severity":"Major","ts":76,"te":79,"rs":null,"re":null,"ip":null},{"id":"b8b48abd-c0d3-5f67-ad5e-dd96b17957e4","text":"No son prescriptivas, sino adaptables a los objetivos, capacidad y recursos específicos de cada comunidad diversa.","type":"Addition","severity":"Major","ts":105,"te":113,"rs":null,"re":null,"ip":null},{"id":"b667f2fc-6b28-5af8-adb8-90bbf3867b97","text":"No son prescriptivas, sino adaptables a los objetivos, capacidad y recursos de cada comunidad.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":76,"re":88,"ip":76}]},{"id":"c26adb9caed4896d","order":6,"source":"Mentees should feel comfortable seeking mentor advice, and mentors should proactively engage in their development, monitoring communication frequency as an indicator of openness.","reference":"Los alumnos deberían sentirse cómodos pidiendo consejo al mentor, y los mentores deberían participar activamente en su desarrollo, controlando la frecuencia de la comunicación como indicador de apertura.","candidates":[{"id":"7d679ae7-5f14-5c45-98e1-d62105a846aa","text":"Los alumnos no deberían sentirse cómodos pidiendo consejo al mentor, y los mentores deberían participar activamente en su desarrollo, controlando la frecuencia de la comunicación como indicador de apertura.","type":"Mistranslation","severity":"Major","ts":11,"te":14,"rs":null,"re":null,"ip":null},{"id":"f5fc891c-1504-5293-9d5b-1d010c6374a8","text":"Los futuros alumnos deberían sentirse cómodos pidiendo consejo al mentor, y los mentores deberían participar activamente en su desarrollo, controlando la frecuencia de la comunicación como indicador de apertura.","type":"Addition","severity":"Minor","ts":1,"te":9,"rs":null,"re":null,"ip":null},{"id":"8712cf99-853e-51bb-95b0-a8bcbeae0b39","text":"Los alumnos deberían sentirse cómodos pidiendo consejo al mentor, y los mentores deberían participar activamente en su desarrollo, controlando la frecuencia de la comunicación como indicador.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":190,"re":202,"ip":190}]},{"id":"ca131944c57b448d","order":7,"source":"Documenting challenges and solutions, even privately, can aid progress and inform future mentoring experiences.","reference":"Documentar los retos y las soluciones, incluso en privado, puede ayudar a progresar e informar sobre futuras experiencias de formación.","candidates":[{"id":"d7e7f7c7-1af3-5fa9-8181-d51bc8825b22","text":"Documentar los retos y las soluciones, incluso públicamente, puede ayudar a progresar e informar sobre futuras experiencias de formación.","type":"Mistranslation","severity":"Major","ts":57,"te":59,"rs":49,"re":57,"ip":null},{"id":"47bbf98e-42f0-5ffd-81b8-d87e6f05dff4","text":"Documentar los retos y las soluciones, incluso en privado, puede potencialmente ayudar a progresar e informar sobre futuras experiencias de formación.","type":"Addition","severity":"Minor","ts":63,"te":78,"rs":null,"re":null,"ip":null},{"id":"488d0ed6-ec47-5242-a611-d7b3f57ca97a","text":"Documentar los retos y las soluciones, incluso en privado, puede ayudar a progresar e informar sobre experiencias de mentoring.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":101,"re":109,"ip":101}]},{"id":"6eeafc9f97509adf","order":8,"source":"Many Indigenous languages lack standardized writing systems and proficiency tests, and Indigenous language translators and interpreters may have limited formal education or training specific to translation and interpretation.","reference":"Muchas lenguas indígenas carecen de sistemas de escritura estandarizados y de pruebas de aptitud, y los traductores e intérpretes de lenguas indígenas pueden tener una educación oficial o formación específicas en traducción e interpretación limitadas.","candidates":[{"id":"34724666-3a32-544a-87f0-6556ca57f60c","text":"Muchas lenguas indígenas carecen de sistemas de escritura estandarizados y de pruebas de aptitud, y los traductores e intérpretes de lenguas indígenas pueden tener una educación oficial o formación no específica en traducción e interpretación limitadas.","type":"Mistranslation","severity":"Major","ts":198,"te":201,"rs":null,"re":null,"ip":null},{"id":"e7de33de-8e66-5d25-950d-6e74fbc9ae7f","text":"Muchas lenguas indígenas aún carecen de sistemas de escritura estandarizados y de pruebas de aptitud, y los traductores e intérpretes de lenguas indígenas pueden tener una educación oficial o formación específicas en traducción e interpretación limitadas.","type":"Addition","severity":"Major","ts":24,"te":28,"rs":null,"re":null,"ip":null},{"id":"1a8aa5fb-f5c0-5e56-800c-6235f1623466","text":"Muchas lenguas indígenas carecen de sistemas de escritura estandarizados y de pruebas de aptitud, y los traductores e intérpretes de lenguas indígenas pueden tener una educación oficial o formación limitada.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":198,"re":241,"ip":198}]},{"id":"fe6903a318e3a2bc","order":9,"source":"Interpreters use tools for terminology, document management, and booth work.","reference":"Los intérpretes utilizan herramientas para la terminología, la gestión de documentos y el trabajo en cabina.","candidates":[{"id":"befd7852-e6b7-516c-bf71-0481c9df81d4","text":"Los intérpretes no utilizan herramientas para la terminología, la gestión de documentos y el trabajo en cabina.","type":"Mistranslation","severity":"Major","ts":15,"te":18,"rs":null,"re":null,"ip":null},{"id":"15839385-917e-5d07-8801-4f8fad763cae","text":"Los intérpretes ingleses utilizan herramientas para la terminología, la gestión de documentos y el trabajo en cabina.","type":"Addition","severity":"Major","ts":13,"te":22,"rs":null,"re":null,"ip":null},{"id":"696fcb0c-eef5-5003-8ba6-4c311ed5386d","text":"Los intérpretes utilizan herramientas para la terminología, la gestión de documentos y el trabajo.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":97,"re":107,"ip":97}]},{"id":"892c2605aafbba8a","order":10,"source":"They should arrive prepared, review notes, bring materials, share experiences, and give honest feedback.","reference":"Deben llegar preparados, repasar los apuntes, traer los materiales, compartir experiencias y dar una retroalimentación honesta.","candidates":[{"id":"817c6c29-8145-5fb3-87f8-b7c09903c509","text":"No deben llegar preparados, repasar los apuntes, traer los materiales, compartir experiencias y dar una retroalimentación honesta.","type":"Mistranslation","severity":"Major","ts":0,"te":4,"rs":0,"re":1,"ip":null},{"id":"e7f932a3-1bd3-5146-a984-06a80b1fc276","text":"Deben llegar idealmente preparados, repasar los apuntes, traer los materiales, compartir experiencias y dar una retroalimentación honesta.","type":"Addition","severity":"Minor","ts":12,"te":23,"rs":null,"re":null,"ip":null},{"id":"43514386-ebcd-51c8-9110-54bf446ffcff","text":"Deben llegar preparados, repasar los apuntes, traer los materiales, compartir experiencias y dar retroalimentación.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":118,"re":126,"ip":114}]},{"id":"2eec4d3b44d00958","order":11,"source":"Marketing is key to growing a freelance practice.","reference":"El marketing es clave para hacer crecer una actividad como autónomo.","candidates":[{"id":"765a80bb-2031-5a48-9dfc-ddfcae0aa2cf","text":"El marketing no es clave para hacer crecer una actividad como autónomo.","type":"Mistranslation","severity":"Major","ts":12,"te":15,"rs":null,"re":null,"ip":null},{"id":"56f6aff0-9887-5c61-9f93-5307387a83a0","text":"El marketing creativo es clave para hacer crecer una actividad como autónomo.","type":"Addition","severity":"Minor","ts":12,"te":21,"rs":null,"re":null,"ip":null},{"id":"80ab4bca-09a1-5172-b1f7-02cb70a119fb","text":"El marketing es clave para hacer crecer una actividad.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":53,"re":67,"ip":53}]},{"id":"35f5bc6d689910ff","order":12,"source":"If either the mentor or mentee becomes unavailable, the mentorship may be paused.","reference":"Si el mentor o el alumno en un cierto momento no está disponible, la formación puede ponerse en pausa.","candidates":[{"id":"3a19819e-d8a6-59f9-8b9c-6e548074818f","text":"Si el mentor o el alumno en un cierto momento no está disponible, la formación no puede ponerse en pausa.","type":"Mistranslation","severity":"Major","ts":79,"te":82,"rs":null,"re":null,"ip":null},{"id":"3a85da58-6f65-50ed-a576-03cd3e1ac2e0","text":"Si el mentor o el alumno en un cierto momento no está disponible, la formación puede ponerse en pausa posteriormente.","type":"Addition","severity":"Minor","ts":101,"te":116,"rs":null,"re":null,"ip":null}]},{"id":"09baec8a0335a2aa","order":13,"source":"It is important to include materials rooted in Indigenous contexts such as oral histories, traditional stories, or documents reflecting community values, ensuring cultural integrity and accuracy are maintained throughout.","reference":"Es importante incluir materiales arraigados en contextos indígenas, como historias orales, relatos tradicionales o documentos que reflejen los valores de la comunidad, garantizando que se vayan manteniendo la integridad cultural y la precisión.","candidates":[{"id":"f42e984d-9e13-55fa-8115-bf425ce5d71d","text":"Es importante incluir materiales arraigados en contextos indígenas, como historias orales, relatos no tradicionales o documentos que reflejen los valores de la comunidad, garantizando que se vayan manteniendo la integridad cultural y la precisión.","type":"Mistranslation","severity":"Major","ts":98,"te":101,"rs":null,"re":null,"ip":null},{"id":"7dcd4533-84cd-5b4f-9909-192c9424f28e","text":"Es importante incluir materiales relevantes arraigados en contextos indígenas, como historias orales, relatos tradicionales o documentos que reflejen los valores de la comunidad, garantizando que se vayan manteniendo la integridad cultural y la precisión.","type":"Addition","severity":"Minor","ts":30,"te":41,"rs":null,"re":null,"ip":null},{"id":"c54a62f0-9133-5a23-9a4f-dd3b939f37fe","text":"Es importante incluir materiales arraigados en contextos indígenas, como historias orales, relatos tradicionales o documentos que reflejen los valores de la comunidad, garantizando que se vaya manteniendo la integridad y la precisión.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":220,"re":229,"ip":219}]},{"id":"93f50b6b8736be08","order":14,"source":"It may include time and geographic limitations to make it enforceable.","reference":"Puede incluir limitaciones temporales y geográficas para que sea aplicable.","candidates":[{"id":"01073624-b904-5acf-a7a5-2c4d643eb149","text":"Puede no incluir limitaciones temporales y geográficas para que sea aplicable.","type":"Mistranslation","severity":"Major","ts":5,"te":8,"rs":null,"re":null,"ip":null},{"id":"2c5397e5-2900-5f16-8442-614c653c46f2","text":"Puede incluir limitaciones temporales y geográficas específicas para que sea aplicable.","type":"Addition","severity":"Minor","ts":52,"te":64,"rs":null,"re":null,"ip":null},{"id":"bd36f8fe-d902-5ecc-94b3-a904d9b69a7a","text":"Puede incluir limitaciones temporales para que sea aplicable.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":38,"re":52,"ip":38}]},{"id":"fda573b84910df5a","order":15,"source":"Mentors serve as guides, teachers, supporters, protectors, and role models.","reference":"Los mentores actúan como guías, docentes, apoyos, protectores y modelos de rol.","candidates":[{"id":"0c330b9c-7190-5a0d-96bc-b3d2e0f08495","text":"Los mentores no actúan como guías, docentes, apoyos, protectores y modelos de rol.","type":"Mistranslation","severity":"Major","ts":12,"te":15,"rs":null,"re":null,"ip":null},{"id":"cb803b85-de7c-55e2-b05e-1117a987fd28","text":"Los mentores aquí actúan como guías, docentes, apoyos, protectores y modelos de rol.","type":"Addition","severity":"Major","ts":12,"te":17,"rs":null,"re":null,"ip":null},{"id":"983f0f2a-7670-54f4-bac7-80d67f405c6e","text":"Los mentores actúan como guías, docentes, apoyos, protectores y modelos.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":71,"re":78,"ip":71}]},{"id":"45eeb238ce060bea","order":16,"source":"International Decade of Indigenous Languages (IDIL 2022–2032), which emphasizes","reference":"Decenio Internacional de las Lenguas Indígenas (IDIL 2022-2032), que hace hincapié en","candidates":[{"id":"4a40766c-8739-5de6-b6e3-87a4f3ddec8e","text":"Decenio Nacional de las Lenguas Indígenas (IDIL 2022-2032), que no hace hincapié en","type":"Mistranslation","severity":"Major","ts":8,"te":9,"rs":8,"re":14,"ip":null},{"id":"35866c13-f005-5a35-9a87-e2c08175827c","text":"Decenio Internacional de las Lenguas Indígenas (IDIL 2022-2032), que no hace hincapié en","type":"Omission","severity":"Major","ts":null,"te":null,"rs":69,"re":69,"ip":69}]},{"id":"61fadf58054f6ed1","order":17,"source":"Mentees should be honest about their skills, and mentors should acknowledge their limitations and suggest alternative resources when necessary.","reference":"Los alumnos deberían ser honestos sobre sus habilidades, y los mentores deberían reconocer sus limitaciones y sugerir recursos alternativos cuando sea necesario.","candidates":[{"id":"d89567f8-100b-57a6-ac9a-72fafab310ae","text":"Los alumnos deberían no ser honestos sobre sus habilidades, y los mentores deberían reconocer sus limitaciones y sugerir recursos alternativos cuando sea necesario.","type":"Mistranslation","severity":"Major","ts":20,"te":23,"rs":null,"re":null,"ip":null},{"id":"f76213b8-5cc1-57f5-ae60-0bc622e3bc4a","text":"Los mentees efectivos deberían ser honestos sobre sus habilidades, y los mentores deberían reconocer sus limitaciones y sugerir recursos alternativos cuando sea necesario.","type":"Addition","severity":"Minor","ts":7,"te":19,"rs":null,"re":null,"ip":null},{"id":"e606e0d9-423c-52ac-94da-355aca4a9fd4","text":"Los alumnos deberían ser honestos sobre sus habilidades, y los mentores deberían reconocer sus limitaciones y sugerir recursos cuando sea necesario.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":127,"re":140,"ip":127}]},{"id":"8ab0646b78025d8a","order":18,"source":"Translators use CAT tools (free and paid) and cloud or desktop software for terminology, translation memory, and project tracking.","reference":"Los traductores utilizan herramientas CAT (gratuitas y de pago) y software en la nube o de escritorio para la terminología, la memoria de traducción y el seguimiento de proyectos.","candidates":[{"id":"7475ab9d-b358-5673-a97c-a7c2e90a9a91","text":"Los traductores no utilizan herramientas CAT (gratuitas y de pago) y software en la nube o de escritorio para la terminología, la memoria de traducción y el seguimiento de proyectos.","type":"Mistranslation","severity":"Major","ts":15,"te":18,"rs":null,"re":null,"ip":null},{"id":"fce7bcd9-5413-5bde-98d7-3b94d837f212","text":"Los traductores bilingües utilizan herramientas CAT (gratuitas y de pago) y software en la nube o de escritorio para la terminología, la memoria de traducción y el seguimiento de proyectos.","type":"Addition","severity":"Minor","ts":13,"te":23,"rs":null,"re":null,"ip":null},{"id":"8c07fe73-0c77-53ea-bfb8-a55c49e8171f","text":"Los traductores utilizan herramientas (gratuitas y de pago) y software en la nube o de escritorio para la terminología, la memoria de traducción y el seguimiento de proyectos.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":37,"re":41,"ip":37}]},{"id":"db28e5c307b1d45e","order":19,"source":"To help track progress, a simple chart or checklist can be created that includes meeting dates and work completed—such as number of words translated, minutes of interpreting or subtitling completed, or other relevant outputs.","reference":"Para facilitar el seguimiento de los progresos, se puede crear una sencilla tabla o lista de control que incluya las fechas de las reuniones y el trabajo realizado, como el número de palabras traducidas, los minutos de interpretación o subtitulado realizados u otros resultados relevantes.","candidates":[{"id":"defd7a56-56ba-576d-9d09-e51cb7cb09e8","text":"Para facilitar el seguimiento de los progresos, se puede crear una compleja tabla o lista de control que incluya las fechas de las reuniones y el trabajo realizado, como el número de palabras traducidas, los minutos de interpretación o subtitulado realizados u otros resultados relevantes.","type":"Mistranslation","severity":"Major","ts":67,"te":72,"rs":67,"re":68,"ip":null},{"id":"ca2fec34-0366-5079-95c5-9cdc7e436485","text":"Para facilitar el seguimiento de los progresos, se puede crear simplemente una sencilla tabla o lista de control que incluya las fechas de las reuniones y el trabajo realizado, como el número de palabras traducidas, los minutos de interpretación o subtitulado realizados u otros resultados relevantes.","type":"Addition","severity":"Minor","ts":62,"te":74,"rs":null,"re":null,"ip":null},{"id":"ba79f338-7eb4-54ab-9e80-9bd829bfae97","text":"Para facilitar el seguimiento de los progresos, se puede crear una sencilla tabla o lista de control que incluya las fechas y el trabajo realizado, como el número de palabras traducidas, los minutos de interpretación o subtitulado realizados u otros resultados relevantes.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":122,"re":139,"ip":122}]},{"id":"28a60eff9e048588","order":20,"source":"To support collaboration, a mentor might create a private space such as an online forum where mentees can exchange ideas, ask questions, and share experiences from their mentoring journeys.","reference":"Para apoyar la colaboración, un mentor puede crear un espacio privado, como un foro en línea, en el que los alumnos puedan intercambiar ideas, hacer preguntas y compartir experiencias de sus recorridos de formación.","candidates":[{"id":"dfc7c26b-e604-5060-9bd9-49494ecea43b","text":"Para apoyar la colaboración, un mentor puede preferir un espacio privado, como un foro en línea, en el que los alumnos puedan intercambiar ideas, hacer preguntas y compartir experiencias de sus recorridos de formación.","type":"Mistranslation","severity":"Major","ts":48,"te":52,"rs":48,"re":49,"ip":null},{"id":"46c6b3d5-44ba-56d5-a3ff-9cb0155ef84d","text":"Para apoyar la colaboración, un mentor puede simplemente crear un espacio privado, como un foro en línea, en el que los alumnos puedan intercambiar ideas, hacer preguntas y compartir experiencias de sus recorridos de formación.","type":"Addition","severity":"Major","ts":43,"te":55,"rs":null,"re":null,"ip":null},{"id":"798c5d82-50f8-53e2-a10e-21a2d2ad90b8","text":"Para apoyar la colaboración, un mentor puede crear un espacio, como un foro en línea, en el que los alumnos puedan intercambiar ideas, hacer preguntas y compartir experiencias de sus recorridos de formación.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":60,"re":68,"ip":60}]},{"id":"a1ae57abf5298cda","order":21,"source":"Mentor: A person who provides advice or training to a mentee and usually has more experience and knowledge in a specialized field.","reference":"Mentor: Persona que asesora o forma a un alumno y que suele tener más experiencia y conocimientos en un campo especializado.","candidates":[{"id":"be264243-fe69-5f0d-8998-db555d0877bc","text":"Mentor: Persona que asesora o forma a un alumno y que suele tener más experiencia y conocimientos en un campo no especializado.","type":"Mistranslation","severity":"Major","ts":110,"te":113,"rs":null,"re":null,"ip":null},{"id":"9e4db1de-e19b-5401-b899-58e77fe62473","text":"Mentor efectivo: Persona que asesora o forma a un alumno y que suele tener más experiencia y conocimientos en un campo especializado.","type":"Addition","severity":"Major","ts":6,"te":15,"rs":null,"re":null,"ip":null},{"id":"1d4ed7bf-89c5-5cf2-b34b-88e07b3fc122","text":"Mentor: Persona que asesora o forma a un alumno y que suele tener experiencia y conocimientos en un campo especializado.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":66,"re":70,"ip":66}]},{"id":"2c75831cf3ae6c17","order":22,"source":"This document is one in a series of guidelines entitled Zero to Digital addressing language digitization practices, authored by Translation Commons.","reference":"Este documento forma parte de una serie de Guías De Cero a Digital, elaborada por Translation Commons, que aborda las prácticas de digitalización de las lenguas.","candidates":[{"id":"b2f26cfe-7c32-5f89-9935-d53f3cc54b1d","text":"Este documento particular forma parte de una serie de Guías De Cero a Digital, elaborada por Translation Commons, que aborda las prácticas de digitalización de las lenguas.","type":"Addition","severity":"Major","ts":14,"te":25,"rs":null,"re":null,"ip":null},{"id":"b2566646-8c7e-5178-bea4-e7975aa42736","text":"Este documento forma parte de una serie de Guías De Cero a Digital, elaborada por Translation Commons, que aborda las prácticas de digitalización.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":145,"re":160,"ip":145}]},{"id":"7a585ffde24756ff","order":23,"source":"Indigenous interpreters who freelance are essentially small business owners.","reference":"Los intérpretes indígenas que trabajan por cuenta propia son esencialmente pequeños empresarios.","candidates":[{"id":"19f8ee06-3057-5db7-acb0-285847d0d257","text":"Los intérpretes indígenas que trabajan por cuenta propia son esencialmente grandes empresarios.","type":"Mistranslation","severity":"Major","ts":75,"te":80,"rs":75,"re":76,"ip":null},{"id":"6e68b765-9294-5e8b-a5fa-8692496a05fc","text":"Los intérpretes culturales indígenas que trabajan por cuenta propia son esencialmente pequeños empresarios.","type":"Addition","severity":"Minor","ts":13,"te":24,"rs":null,"re":null,"ip":null},{"id":"f65f9f69-f50f-5ac9-bdfa-9751564442d1","text":"Los intérpretes que trabajan por cuenta propia son esencialmente pequeños empresarios.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":14,"re":24,"ip":14}]},{"id":"dc60a4af64b47606","order":24,"source":"This digital exclusion also increases the risk of cultural misrepresentation or appropriation.","reference":"Esta exclusión digital también aumenta el riesgo de tergiversación o apropiación cultural.","candidates":[{"id":"9f64b528-e1f6-55ba-b9b8-81b02bfd02a6","text":"Esta exclusión digital también reduce el riesgo de tergiversación o apropiación cultural.","type":"Mistranslation","severity":"Major","ts":31,"te":34,"rs":31,"re":32,"ip":null},{"id":"52d9f596-7805-5410-88d5-3c021ab5c3e4","text":"Esta exclusión digital también potencialmente aumenta el riesgo de tergiversación o apropiación cultural.","type":"Addition","severity":"Minor","ts":30,"te":45,"rs":null,"re":null,"ip":null},{"id":"eab27aa3-c9bf-5898-8a52-abb1837fb9c3","text":"Esta exclusión digital también aumenta el riesgo.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":48,"re":89,"ip":48}]},{"id":"05c9b44e680f16f1","order":25,"source":"Where available, they can support mentees exploring certifications or formal training.","reference":"Cuando sea posible, pueden ayudar a los alumnos a buscar certificaciones o formación oficial.","candidates":[{"id":"a326eb96-5b7d-5f9c-9ee9-130b6a19319a","text":"Cuando sea posible, pueden ayudar a los alumnos a buscar certificaciones o formación informal.","type":"Mistranslation","severity":"Major","ts":89,"te":91,"rs":86,"re":90,"ip":null},{"id":"135cd22b-734e-5486-a536-034cd75fd99c","text":"Cuando sea posible, pueden ayudar a los alumnos también a buscar certificaciones o formación oficial.","type":"Addition","severity":"Minor","ts":48,"te":56,"rs":null,"re":null,"ip":null},{"id":"0e07a63f-5cbb-549f-8008-dc085fe974d5","text":"Cuando sea posible, pueden ayudar a los alumnos a buscar certificaciones o entrenamiento.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":77,"re":92,"ip":88}]},{"id":"e4646e48fe72ad18","order":26,"source":"It can also be needed in bringing outside content such as emergency, health, and regulatory, and other information to the Indigenous community.","reference":"También puede ser necesario para hacer llegar contenidos externos como emergencias, salud y normativa, y otra información a la comunidad indígena.","candidates":[{"id":"24726c94-1152-547a-937b-99bec1bf9422","text":"También puede ser utilizado para hacer llegar contenidos externos como emergencias, salud y normativa, y otra información a la comunidad indígena.","type":"Mistranslation","severity":"Minor","ts":18,"te":24,"rs":18,"re":23,"ip":null},{"id":"26f1ba6c-a476-5c8e-be4a-e318c9431ee6","text":"También puede ser muy necesario para hacer llegar contenidos externos como emergencias, salud y normativa, y otra información a la comunidad indígena.","type":"Addition","severity":"Minor","ts":17,"te":21,"rs":null,"re":null,"ip":null},{"id":"6cce38d0-5e11-5b24-a232-8f8433918a63","text":"También puede ser necesario para hacer llegar contenidos externos como emergencias, salud y normativa, y otra información a la comunidad.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":136,"re":145,"ip":136}]},{"id":"ba0dc9fc1d0f9a40","order":27,"source":"Mentor-Mentee Relationship (MMR): A partnership established between mentors and mentees to work on achieving personal or professional goals.","reference":"Relación Mentor-Alumno (RMA): Asociación establecida entre mentores y alumnos para trabajar en la realización de objetivos personales o profesionales.","candidates":[{"id":"12b7c3c0-6650-5c87-a60f-0ef8a63d55be","text":"Relación Mentor-Alumno (RMA): Asociación establecida entre mentores y alumnos para trabajar en la realización de objetivos impersonales o profesionales.","type":"Mistranslation","severity":"Major","ts":123,"te":125,"rs":null,"re":null,"ip":null},{"id":"daeae697-059f-5f2f-82fe-9f5b52a86414","text":"Relación Mentor-Alumno (RMA): Asociación establecida entre mentores y alumnos para trabajar en la realización de objetivos personales o profesionales de manera única.","type":"Addition","severity":"Minor","ts":149,"te":165,"rs":null,"re":null,"ip":null},{"id":"76fcf964-1041-5781-92e3-71d2a7bfbe58","text":"Relación Mentor-Alumno (RMA): Asociación establecida entre mentores y alumnos para trabajar en la realización de objetivos","type":"Omission","severity":"Major","ts":null,"te":null,"rs":122,"re":150,"ip":122}]},{"id":"6e58255bcb0a1d91","order":28,"source":"They are not perfect; formatting issues and culturally sensitive content may require human judgment.","reference":"No son perfectas: los problemas de formato y el contenido culturalmente sensible pueden requerir criterio humano.","candidates":[{"id":"865c0e99-3bca-5e01-b762-4d68f68ff9d0","text":"No son perfectas: los problemas de formato y el contenido culturalmente insensible pueden requerir criterio humano.","type":"Mistranslation","severity":"Major","ts":72,"te":74,"rs":null,"re":null,"ip":null},{"id":"c4c22934-8742-5673-a81a-c15b3676a9e5","text":"No son perfectas: los problemas de formato complejos y el contenido culturalmente sensible pueden requerir criterio humano.","type":"Addition","severity":"Major","ts":42,"te":52,"rs":null,"re":null,"ip":null},{"id":"01f55884-366b-5e2a-81ba-3535c668daaa","text":"No son perfectas: los problemas de formato y el contenido culturalmente sensible pueden requerir criterio.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":105,"re":112,"ip":105}]},{"id":"3da1b2b97697f455","order":29,"source":"Mentees should explore relevant codes of ethics and discuss important issues like advocacy and certification (for interpreting) and certification and payment (for translation).","reference":"Los alumnos deberían estudiar los códigos deontológicos pertinentes y debatir cuestiones importantes como la abogacía y la certificación (para la interpretación) y la certificación y el pago (para la traducción).","candidates":[{"id":"a31607f5-5aa7-55e6-802d-2e942f335ca7","text":"Los alumnos deberían leer los códigos deontológicos pertinentes y debatir cuestiones importantes como la abogacía y la certificación (para la interpretación) y la certificación y el pago (para la traducción).","type":"Mistranslation","severity":"Major","ts":23,"te":24,"rs":22,"re":28,"ip":null},{"id":"59e89964-5bc1-58f7-a195-652a1d9d9852","text":"Los mentores internacionales deberían estudiar los códigos deontológicos pertinentes y debatir cuestiones importantes como la abogacía y la certificación (para la interpretación) y la certificación y el pago (para la traducción).","type":"Addition","severity":"Major","ts":4,"te":24,"rs":null,"re":null,"ip":null},{"id":"8bb155b5-dc15-5117-8f5e-e28e67b2840b","text":"Los alumnos deberían estudiar los códigos pertinentes y debatir cuestiones importantes como la abogacía y la certificación (para la interpretación) y la certificación y el pago (para la traducción).","type":"Omission","severity":"Major","ts":null,"te":null,"rs":39,"re":53,"ip":39}]},{"id":"49c3567dd5ca17c1","order":30,"source":"Clear agreements regarding time, communication, and compensation help ensure a respectful, effective, and sustainable mentorship for both Indigenous mentors and mentees.","reference":"Los acuerdos claros respecto al tiempo, la comunicación y la remuneración ayudan a garantizar una tutoría respetuosa, eficaz y sostenible para ambos, mentores y alumnos indígenas.","candidates":[{"id":"1dc60e33-c3c6-505a-b6ce-6952fdcb550c","text":"Los acuerdos claros respecto al tiempo, la comunicación y la remuneración ayudan a establecer una tutoría respetuosa, eficaz y sostenible para ambos, mentores y alumnos indígenas.","type":"Mistranslation","severity":"Minor","ts":87,"te":92,"rs":85,"re":92,"ip":null},{"id":"1a27f9ce-df42-5614-a873-1ca8c06012a4","text":"Los acuerdos claros respecto al tiempo, la comunicación y la remuneración ayudan a garantizar plenamente una tutoría respetuosa, eficaz y sostenible para ambos, mentores y alumnos indígenas.","type":"Addition","severity":"Major","ts":94,"te":105,"rs":null,"re":null,"ip":null},{"id":"8310903f-22f0-5f35-a116-2f4f833c0bf2","text":"Los acuerdos claros respecto al tiempo, la comunicación y la remuneración ayudan a garantizar una tutoría respetuosa, eficaz y sostenible para ambos, mentores y alumnos.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":168,"re":178,"ip":168}]},{"id":"5da3b07361edcb6e","order":31,"source":"Whether your community is beginning its digitization journey or building upon established work, we hope these resources serve as a trusted foundation.","reference":"Tanto si su comunidad está comenzando su andadura en la digitalización como si está construyendo sobre un trabajo ya realizado, esperamos que estos recursos le sirvan como base fiable.","candidates":[{"id":"81008a32-1deb-5fac-a8a0-2f2cdcf551fa","text":"Tanto si su comunidad está comenzando su andadura en la digitalización como si está construyendo sobre un trabajo ya realizado, esperamos que estos recursos no le sirvan como base fiable.","type":"Mistranslation","severity":"Major","ts":157,"te":160,"rs":null,"re":null,"ip":null},{"id":"142121bc-7652-5d6a-8b2e-63ef281c56fd","text":"Tanto si su comunidad está comenzando su andadura en la digitalización como si está construyendo sobre un trabajo ya realizado, especialmente esperamos que estos recursos le sirvan como base fiable.","type":"Addition","severity":"Minor","ts":132,"te":146,"rs":null,"re":null,"ip":null},{"id":"c586584c-f77d-5234-b363-e75a4f9d8370","text":"Tanto si su comunidad está comenzando su andadura en la digitalización como si está construyendo sobre un trabajo ya realizado, esperamos que estos recursos le sirvan.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":166,"re":183,"ip":166}]},{"id":"c250cea7ec2c4215","order":32,"source":"creating open-access resources and tools for the global language industries.","reference":"la creación de recursos y herramientas de libre acceso para las industrias del lenguaje en el mundo.","candidates":[{"id":"152b5379-c06a-5c43-abff-df37372f59af","text":"la provisión de recursos y herramientas de libre acceso para las industrias del lenguaje en el mundo.","type":"Mistranslation","severity":"Major","ts":5,"te":9,"rs":5,"re":8,"ip":null},{"id":"c4654e7e-892e-5fd2-9f66-73e62a8f2335","text":"la creación de recursos educativos y herramientas de libre acceso para las industrias del lenguaje en el mundo.","type":"Addition","severity":"Minor","ts":21,"te":32,"rs":null,"re":null,"ip":null},{"id":"fdcffa65-878b-5d18-933b-0148ade1e8b6","text":"la creación de recursos y herramientas de libre acceso para las industrias del lenguaje","type":"Omission","severity":"Major","ts":null,"te":null,"rs":87,"re":100,"ip":87}]},{"id":"29fd861cabf4ce56","order":33,"source":"Mentors should give feedback, share best practices, and help mentees adapt to different contexts and community needs.","reference":"Los mentores deberían dar su opinión, compartir las mejores prácticas y ayudar a los alumnos a adaptarse a los diferentes contextos y necesidades de la comunidad.","candidates":[{"id":"f2dcf963-0ca1-5178-9722-7b7a0498c267","text":"Los mentores deberían recibir retroalimentación, compartir las mejores prácticas y ayudar a los alumnos a adaptarse a los diferentes contextos y necesidades de la comunidad.","type":"Mistranslation","severity":"Major","ts":22,"te":28,"rs":22,"re":24,"ip":null},{"id":"1f65ee99-2ea4-53d9-8862-3990f299b34c","text":"Los mentores siempre deberían dar su opinión, compartir las mejores prácticas y ayudar a los alumnos a adaptarse a los diferentes contextos y necesidades de la comunidad.","type":"Addition","severity":"Major","ts":12,"te":20,"rs":null,"re":null,"ip":null},{"id":"acb35b75-dac9-558c-9fdc-72c27aaa608e","text":"Los mentores deberían dar su opinión, compartir las mejores prácticas y ayudar a los alumnos a adaptarse a los diferentes contextos y necesidades.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":145,"re":161,"ip":145}]},{"id":"ed48e5021566a142","order":34,"source":"To avoid these, both mentors and mentees should openly discuss expectations and responsibilities at the program's start, document agreements, maintain proactive communication, and establish dedicated times for questions.","reference":"Para evitarlos, tanto mentores como alumnos deberían dialogar abiertamente sobre expectativas y responsabilidades al inicio del programa, documentar los acuerdos, mantener una comunicación proactiva y establecer tiempos dedicados a las preguntas.","candidates":[{"id":"b24f313b-94ac-5fe7-9294-dc18ae6f1a7d","text":"Para evitarlos, tanto mentores como alumnos deberían dialogar abiertamente sobre expectativas y responsabilidades al inicio del programa, documentar los acuerdos, mantener una comunicación proactiva y establecer tiempos no dedicados a las preguntas.","type":"Mistranslation","severity":"Major","ts":220,"te":223,"rs":null,"re":null,"ip":null},{"id":"ce7b70b2-4ed1-5481-b4e4-a4ca9fb8673f","text":"Para evitarlos, tanto mentores individuales como alumnos deberían dialogar abiertamente sobre expectativas y responsabilidades al inicio del programa, documentar los acuerdos, mantener una comunicación proactiva y establecer tiempos dedicados a las preguntas.","type":"Addition","severity":"Minor","ts":28,"te":41,"rs":null,"re":null,"ip":null},{"id":"60e0dbbf-af18-526c-9382-8703644bffeb","text":"Para evitarlos, tanto mentores como alumnos deberían dialogar abiertamente sobre expectativas y responsabilidades al inicio del programa, documentar los acuerdos, mantener una comunicación proactiva y establecer tiempos para las preguntas.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":220,"re":225,"ip":220}]},{"id":"334b94bef6ecdfed","order":35,"source":"TC may update this document at any time without notice and is not liable for any related damages.","reference":"TC puede actualizar este documento en cualquier momento sin previo aviso y no se hace responsable de ningún daño relacionado.","candidates":[{"id":"9f7fd6b9-06f0-5476-a3c2-abcd00474d0e","text":"TC no puede actualizar este documento en cualquier momento sin previo aviso y no se hace responsable de ningún daño relacionado.","type":"Mistranslation","severity":"Major","ts":2,"te":5,"rs":null,"re":null,"ip":null},{"id":"80a35b94-6865-5ff2-b2d0-85cd4bffa4aa","text":"TC puede actualizar este documento regulador en cualquier momento sin previo aviso y no se hace responsable de ningún daño relacionado.","type":"Addition","severity":"Major","ts":34,"te":44,"rs":null,"re":null,"ip":null},{"id":"7d3011e3-a85d-5f51-996d-18079dcd4d4a","text":"TC puede actualizar este documento en cualquier momento sin previo aviso y no se hace responsable de ningún daño.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":112,"re":124,"ip":112}]},{"id":"0b612b1b057bf96d","order":36,"source":"Conflicts in mentoring can arise from unclear roles, miscommunication, mentees hesitating to ask questions, mismatched expectations, and conflicting views.","reference":"Los conflictos en la formación pueden surgir por roles poco claros, falta de comunicación, alumnos que no se atreven a hacer preguntas, falta de coincidencia de expectativas y puntos de vista en conflicto.","candidates":[{"id":"9952a99a-bd73-5aff-acb5-5d01728f601b","text":"Los conflictos en la formación pueden dormirse por roles poco claros, falta de comunicación, alumnos que no se atreven a hacer preguntas, falta de coincidencia de expectativas y puntos de vista en conflicto.","type":"Mistranslation","severity":"Major","ts":38,"te":40,"rs":38,"re":40,"ip":null},{"id":"ae8ccba0-1ba4-5c55-ba1c-38df84b6ebad","text":"Los conflictos en la formación pueden solo surgir por roles poco claros, falta de comunicación, alumnos que no se atreven a hacer preguntas, falta de coincidencia de expectativas y puntos de vista en conflicto.","type":"Addition","severity":"Major","ts":37,"te":42,"rs":null,"re":null,"ip":null},{"id":"6ed7fa89-bba2-5ff9-bc6e-63644dddb6bd","text":"Los conflictos en la formación pueden surgir por roles, falta de comunicación, alumnos que no se atreven a hacer preguntas, falta de coincidencia de expectativas y puntos de vista en conflicto.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":53,"re":65,"ip":53}]},{"id":"1fc746b31c185a12","order":37,"source":"To avoid demotivation, sessions should be well-structured, flexible, engaging, and include constructive feedback.","reference":"Para evitar la desmotivación, las sesiones deberían estar bien estructuradas, ser flexibles, atractivas e incluir comentarios constructivos.","candidates":[{"id":"3a05be92-ebe9-5779-a362-ca839adfa5da","text":"Para evitar la desmotivación, las sesiones no deberían estar bien estructuradas, ser flexibles, atractivas e incluir comentarios constructivos.","type":"Mistranslation","severity":"Major","ts":42,"te":45,"rs":null,"re":null,"ip":null},{"id":"70c7e0b3-c9bc-5960-8b71-dcd41b2c4fd3","text":"Para evitar la desmotivación prematura, las sesiones deberían estar bien estructuradas, ser flexibles, atractivas e incluir comentarios constructivos.","type":"Addition","severity":"Major","ts":28,"te":38,"rs":null,"re":null,"ip":null},{"id":"bdc261d6-6028-5fa3-ac26-1dd67e5ef8af","text":"Para evitar la desmotivación, las sesiones deberían estar bien estructuradas, ser flexibles, atractivas e incluir feedback.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":115,"re":139,"ip":121}]},{"id":"148534ddb2797aee","order":38,"source":"Mentors and mentees should work together to select and adapt materials that align with the mentee’s goals and language pair(s), with the flexibility to adjust these resources as the mentorship progresses.","reference":"Los mentores y los alumnos deberían trabajar juntos para seleccionar y adaptar los materiales que se ajusten a los objetivos del alumno y al par o pares de lenguas, con la flexibilidad necesaria para ajustar estos recursos a medida que avanza la tutorización.","candidates":[{"id":"55a189c9-402c-50f9-b424-196b81e6f9a8","text":"Los mentores y los alumnos no deberían trabajar juntos para seleccionar y adaptar los materiales que se ajusten a los objetivos del alumno y al par o pares de lenguas, con la flexibilidad necesaria para ajustar estos recursos a medida que avanza la tutorización.","type":"Mistranslation","severity":"Major","ts":26,"te":29,"rs":null,"re":null,"ip":null},{"id":"40226092-7ac2-5d57-a92e-d1a742c424db","text":"Los mentores y los alumnos deberían trabajar cuidadosamente juntos para seleccionar y adaptar los materiales que se ajusten a los objetivos del alumno y al par o pares de lenguas, con la flexibilidad necesaria para ajustar estos recursos a medida que avanza la tutorización.","type":"Addition","severity":"Minor","ts":44,"te":59,"rs":null,"re":null,"ip":null},{"id":"2f8657d0-c976-5b7e-9e89-3fd37f837758","text":"Los mentores y los alumnos deberían trabajar juntos para seleccionar y adaptar los materiales que se ajusten a los objetivos del alumno y al par de lenguas, con la flexibilidad necesaria para ajustar estos recursos a medida que avanza la tutorización.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":145,"re":153,"ip":145}]},{"id":"4588b4d20485c8f8","order":39,"source":"In response to this critical need, Translation Commons launched the Language","reference":"En respuesta a esta necesidad crítica, Translation Commons puso en marcha el programa Lengua","candidates":[{"id":"c1ab0c8d-6d7c-564b-9b5a-806aa592371c","text":"En respuesta a esta necesidad crítica, Translation Commons cambió el idioma","type":"Mistranslation","severity":"Minor","ts":59,"te":61,"rs":59,"re":67,"ip":null},{"id":"bcdb1d74-ac99-5405-b5c4-340e28b70495","text":"En respuesta a esta necesidad crítica, Translation Commons recientemente puso en marcha el programa Lengua","type":"Addition","severity":"Major","ts":59,"te":73,"rs":null,"re":null,"ip":null},{"id":"246be738-f5e5-52ee-a202-4889141f6f71","text":"En respuesta, Translation Commons puso en marcha el programa Lengua","type":"Omission","severity":"Major","ts":null,"te":null,"rs":11,"re":36,"ip":11}]},{"id":"b562f0bd1f255e3b","order":40,"source":"This contract ensures that neither party will directly compete by using sensitive business information, such as client lists or trade secrets.","reference":"Este contrato garantiza que ninguna de las partes competirá directamente utilizando información empresarial sensible, como listas de clientes o secretos comerciales.","candidates":[{"id":"a09c4c45-612c-5078-b03d-f394fcb7f8c4","text":"Este contrato no garantiza que ninguna de las partes competirá directamente utilizando información empresarial sensible, como listas de clientes o secretos comerciales.","type":"Mistranslation","severity":"Major","ts":12,"te":15,"rs":null,"re":null,"ip":null},{"id":"e6e87b18-cbec-5533-8c61-a1cd74c48d93","text":"Este contrato efectivamente garantiza que ninguna de las partes competirá directamente utilizando información empresarial sensible, como listas de clientes o secretos comerciales.","type":"Addition","severity":"Minor","ts":13,"te":27,"rs":null,"re":null,"ip":null},{"id":"ec5ff926-0ffc-5bd0-98d7-a81ba4f5a400","text":"Este contrato garantiza que ninguna de las partes competirá directamente utilizando información sensible, como listas de clientes o secretos comerciales.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":96,"re":108,"ip":96}]},{"id":"bba91c855264f4b6","order":41,"source":"Mentors can suggest areas of specialization, recommend resources, and share tips for handling assignments confidently.","reference":"Los mentores pueden sugerir áreas de especialización, recomendar recursos y compartir consejos para gestionar las tareas con confianza.","candidates":[{"id":"9b9511c3-7a36-5cdc-939d-212c11658198","text":"Los mentores pueden destacar áreas de especialización, recomendar recursos y compartir consejos para gestionar las tareas con confianza.","type":"Mistranslation","severity":"Minor","ts":23,"te":27,"rs":21,"re":26,"ip":null},{"id":"8b7d01fe-e8dc-5a16-b344-82938d8cd1f7","text":"Los mentores también pueden sugerir áreas de especialización, recomendar recursos y compartir consejos para gestionar las tareas con confianza.","type":"Addition","severity":"Minor","ts":12,"te":20,"rs":null,"re":null,"ip":null},{"id":"cc36c86e-84e4-5340-bcb3-df7b52c28c94","text":"Los mentores pueden sugerir áreas de especialización, recomendar recursos y compartir consejos para las tareas con confianza.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":100,"re":110,"ip":100}]},{"id":"655d88976ca06133","order":42,"source":"Interpreters should research the topic, setting, and participants, review available documents, and bring tools like glossaries or laptops.","reference":"Los intérpretes deberían estudiar el tema, el entorno y los participantes, revisar los documentos disponibles y llevar consigo herramientas como glosarios u ordenadores portátiles.","candidates":[{"id":"2bf0575c-8796-56c7-a6a6-db35444d4e44","text":"Los intérpretes deberían priorizar el tema, el entorno y los participantes, revisar los documentos disponibles y llevar consigo herramientas como glosarios u ordenadores portátiles.","type":"Mistranslation","severity":"Major","ts":25,"te":27,"rs":25,"re":30,"ip":null},{"id":"c90820bc-6fab-5cb4-9e44-7c7ddd17d331","text":"Los intérpretes deberían siempre estudiar el tema, el entorno y los participantes, revisar los documentos disponibles y llevar consigo herramientas como glosarios u ordenadores portátiles.","type":"Addition","severity":"Major","ts":24,"te":32,"rs":null,"re":null,"ip":null},{"id":"c4bfc6b2-d781-510e-a690-316be556c01b","text":"Los intérpretes deberían estudiar el tema, el entorno y los participantes, revisar los documentos disponibles y llevar consigo herramientas.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":139,"re":179,"ip":139}]},{"id":"5431839e5e13f8b7","order":43,"source":"These include language-related work such as building bilingual glossaries, style guides, or post-editing machine translation, which requires both language and tech skills.","reference":"Esta incluyen trabajos relacionados con la lengua, como la elaboración de glosarios bilingües, guías de estilo o la posedición de traducciones automáticas, que requieren tanto de conocimientos lingüísticos como técnicos.","candidates":[{"id":"6eebba61-8706-5d2d-8437-ef6ac97c6c2a","text":"Esta incluyen trabajos no relacionados con la lengua, como la elaboración de glosarios bilingües, guías de estilo o la posedición de traducciones automáticas, que requieren tanto de conocimientos lingüísticos como técnicos.","type":"Mistranslation","severity":"Major","ts":22,"te":25,"rs":null,"re":null,"ip":null},{"id":"ec7e7d5c-28c9-5e64-92e9-6bf477fb724e","text":"Esta incluyen trabajos técnicos relacionados con la lengua, como la elaboración de glosarios bilingües, guías de estilo o la posedición de traducciones automáticas, que requieren tanto de conocimientos lingüísticos como técnicos.","type":"Addition","severity":"Minor","ts":20,"te":29,"rs":null,"re":null,"ip":null},{"id":"1085dfea-d094-5b29-a90f-67292e37a372","text":"Esta incluyen trabajos relacionados con la lengua, como la elaboración de glosarios bilingües, guías de estilo o traducciones automáticas, que requieren tanto de conocimientos lingüísticos como técnicos.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":113,"re":130,"ip":113}]},{"id":"06d5cd35325801df","order":44,"source":"Interpretation focuses on verbally converting spoken content in real time into a target language.","reference":"La interpretación se centra en la conversión verbal de contenidos hablados en tiempo real a una lengua de destino.","candidates":[{"id":"eda54aae-6e04-5ccb-b5dd-dd8d7d621693","text":"La interpretación se centra en la conversión verbal de contenidos hablados en tiempo insustancial a una lengua de destino.","type":"Mistranslation","severity":"Major","ts":85,"te":95,"rs":85,"re":87,"ip":null},{"id":"bb1328c4-ced9-5a0d-9a6e-754fc6f0c99e","text":"La interpretación inglesa se centra en la conversión verbal de contenidos hablados en tiempo real a una lengua de destino.","type":"Addition","severity":"Minor","ts":17,"te":25,"rs":null,"re":null,"ip":null},{"id":"c91529ed-aa79-5e0c-9d8c-689770556719","text":"La interpretación se centra en la conversión verbal de contenidos hablados en tiempo real a una lengua.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":102,"re":113,"ip":102}]},{"id":"ff0e986878936dff","order":45,"source":"Gaining experience in these areas opens new opportunities, especially for those working with clients needing broader language support.","reference":"Adquirir experiencia en estas áreas abre nuevas oportunidades, especialmente para quienes trabajan con clientes que necesitan un apoyo lingüístico más amplio.","candidates":[{"id":"cbac7e37-f2a9-5104-ab63-b07405f16649","text":"Adquirir experiencia en estas áreas proporciona nuevas oportunidades, especialmente para quienes trabajan con clientes que necesitan un apoyo lingüístico más amplio.","type":"Mistranslation","severity":"Minor","ts":36,"te":46,"rs":null,"re":null,"ip":null},{"id":"3724be52-9c3e-51de-a9be-b68e523dc1cc","text":"Adquirir experiencia en estas áreas abre nuevas oportunidades rápidamente, especialmente para quienes trabajan con clientes que necesitan un apoyo lingüístico más amplio.","type":"Addition","severity":"Major","ts":61,"te":73,"rs":null,"re":null,"ip":null},{"id":"7d130e5d-846e-551b-bce7-2bf0037d626e","text":"Adquirir experiencia en estas áreas abre nuevas oportunidades, especialmente para quienes trabajan con clientes que necesitan un apoyo más amplio.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":135,"re":147,"ip":135}]},{"id":"94fb52c49bd44e8e","order":46,"source":"It is often used in situations where it is not appropriate or feasible to stop the flow of speech, for example in hospitals, social services, and schools.","reference":"Suele utilizarse en situaciones en las que no es apropiado o factible detener el flujo del discurso, por ejemplo en hospitales, servicios sociales y escuelas.","candidates":[{"id":"3d8d66aa-4675-5cd1-87b2-cd457ae80344","text":"Suele pasar por alto en situaciones en las que no es apropiado o factible detener el flujo del discurso, por ejemplo en hospitales, servicios sociales y escuelas.","type":"Mistranslation","severity":"Major","ts":11,"te":20,"rs":14,"re":16,"ip":null},{"id":"7ef57fc5-06e5-55f5-bcdb-5e79c0eb7089","text":"Suele utilizarse comúnmente en situaciones en las que no es apropiado o factible detener el flujo del discurso, por ejemplo en hospitales, servicios sociales y escuelas.","type":"Addition","severity":"Minor","ts":15,"te":26,"rs":null,"re":null,"ip":null},{"id":"9bbf08bc-daeb-5db3-80d4-85d307cbce91","text":"Suele utilizarse en situaciones en las que no es apropiado o factible detener el flujo del discurso, por ejemplo en hospitales, servicios y escuelas.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":138,"re":147,"ip":138}]},{"id":"a6d8c627e999bd0b","order":47,"source":"Regular check-ins and goal adjustments are key to success.","reference":"Las revisiones periódicas y los ajustes de objetivos son la clave del éxito.","candidates":[{"id":"47fca21c-f00d-508c-a0ba-4aad45b83be3","text":"Las revisiones irregulares y los ajustes de objetivos son la clave del éxito.","type":"Mistranslation","severity":"Major","ts":24,"te":25,"rs":18,"re":24,"ip":null},{"id":"6d806a35-a524-50ba-8d0b-caf84fd63080","text":"Las revisiones mentales periódicas y los ajustes de objetivos son la clave del éxito.","type":"Addition","severity":"Major","ts":12,"te":21,"rs":null,"re":null,"ip":null},{"id":"c7ecb35a-2cc1-5b17-b32e-1df6830fafc7","text":"Las revisiones periódicas y los ajustes de objetivos son clave del éxito.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":57,"re":60,"ip":57}]},{"id":"b44dca3b538cd9a6","order":48,"source":"Practice texts may include real or adapted materials such as birth certificates, datasheets, newspaper articles, official letters or documents, literary excerpts, or field-specific documents in areas like health, education, law, or cultural preservation.","reference":"Los textos de práctica pueden incluir materiales reales o adaptados, como certificados de nacimiento, hojas de datos, artículos de periódico, cartas o documentos oficiales, extractos literarios o documentos específicos de ámbitos como la sanidad, la educación, el derecho o la conservación cultural.","candidates":[{"id":"8785304f-7d88-5cfd-ab29-8897519f0d26","text":"Los textos de práctica pueden comprender materiales reales o adaptados, como certificados de nacimiento, hojas de datos, artículos de periódico, cartas o documentos oficiales, extractos literarios o documentos específicos de ámbitos como la sanidad, la educación, el derecho o la conservación cultural.","type":"Mistranslation","severity":"Minor","ts":30,"te":36,"rs":30,"re":31,"ip":null},{"id":"ef83be5f-6fc2-5304-aa8c-36492e38a0ae","text":"Los textos de práctica pueden incluir también materiales reales o adaptados, como certificados de nacimiento, hojas de datos, artículos de periódico, cartas o documentos oficiales, extractos literarios o documentos específicos de ámbitos como la sanidad, la educación, el derecho o la conservación cultural.","type":"Addition","severity":"Minor","ts":37,"te":45,"rs":null,"re":null,"ip":null},{"id":"6b93739b-39fd-5604-9a8a-6faeb86db064","text":"Los textos de práctica pueden incluir materiales reales o adaptados, como certificados de nacimiento, hojas de datos, artículos de periódico, cartas o documentos, extractos literarios o documentos específicos de ámbitos como la sanidad, la educación, el derecho o la conservación cultural.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":161,"re":171,"ip":161}]},{"id":"3cc5d8fdcaedec78","order":49,"source":"Main translation fields include general, literary, technical, scientific, medical, legal, business, finance, marketing, tourism, sports, and religion.","reference":"Los principales campos de traducción son la traducción general, literaria, técnica, científica, médica, jurídica, comercial, financiera, de marketing, turística, deportiva y religiosa.","candidates":[{"id":"ad42ace2-c995-5816-bc38-4fd4430e703e","text":"Los principales campos de traducción abarcan la traducción general, literaria, técnica, científica, médica, jurídica, comercial, financiera, de marketing, turística, deportiva y religiosa.","type":"Mistranslation","severity":"Major","ts":37,"te":43,"rs":37,"re":39,"ip":null},{"id":"655470eb-cab2-5f21-b257-22833e48db2a","text":"Los principales campos de traducción asiática son la traducción general, literaria, técnica, científica, médica, jurídica, comercial, financiera, de marketing, turística, deportiva y religiosa.","type":"Addition","severity":"Major","ts":36,"te":45,"rs":null,"re":null,"ip":null},{"id":"4d9cde73-1d2b-51bd-b3db-70a701f7f7eb","text":"Los principales campos son general, literaria, técnica, científica, médica, jurídica, comercial, financiera, de marketing, turística, deportiva y religiosa.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":23,"re":37,"ip":23}]},{"id":"81d0c73ea2d5aada","order":50,"source":"The inability to use one’s language on digital systems profoundly impacts access to information, participation in civic life, and the ability to represent one’s identity, values, and perspectives.","reference":"La incapacidad de utilizar la propia lengua en los sistemas de digitalización afecta profundamente al acceso a la información, a la participación en la vida cívica y a la capacidad de representar la propia identidad, valores y perspectivas.","candidates":[{"id":"56b15c6a-6b7e-534d-8d98-bccf8b887cc4","text":"La incapacidad de utilizar la propia lengua en los sistemas digitales no afecta profundamente al acceso a la información, a la participación en la vida cívica y a la capacidad de representar la propia identidad, valores y perspectivas.","type":"Mistranslation","severity":"Major","ts":67,"te":70,"rs":70,"re":76,"ip":null},{"id":"b9e69540-3127-527e-b79b-5784ae5bf650","text":"La incapacidad deliberada de utilizar la propia lengua en los sistemas de digitalización afecta profundamente al acceso a la información, a la participación en la vida cívica y a la capacidad de representar la propia identidad, valores y perspectivas.","type":"Addition","severity":"Major","ts":14,"te":25,"rs":null,"re":null,"ip":null},{"id":"e9052495-0903-5d48-a2ff-3a8cc5399303","text":"La incapacidad de utilizar la propia lengua en los sistemas de digitalización afecta profundamente al acceso a la información, a la participación en la vida y a la capacidad de representar la propia identidad, valores y perspectivas.","type":"Omission","severity":"Major","ts":null,"te":null,"rs":157,"re":164,"ip":157}]}]}</script>
+<script>
+const DATA = JSON.parse(document.getElementById("pilot-data").textContent);
+/* Standalone demo behavior. DATA is injected by demo/build_demo.py. */
+const STORAGE_KEY = "tcb_benchmark_demo_v1";
+const DEMO_NAME = "Demo Linguist";
+const ERROR_TYPES = ["Mistranslation", "Addition", "Omission"];
+const SEVERITIES = ["Minor", "Major"];
+const REASONS = [
+  ["no_meaningful_error", "No meaningful error"],
+  ["multiple_errors", "Multiple errors"],
+  ["grammar_fluency_plausibility", "Grammar / fluency / plausibility problem"],
+  ["incorrect_unclear_perturbation", "Incorrect or unclear perturbation"],
+  ["other", "Other"],
+];
+const REASON_LABEL = Object.fromEntries(REASONS);
+const EXPORT_COLUMNS = [
+  "storage",
+  "record_kind",
+  "annotator_name",
+  "language_pair",
+  "batch_number",
+  "batch_status",
+  "segment_external_id",
+  "sample_order",
+  "candidate_id",
+  "status",
+  "source_text",
+  "reference_text",
+  "original_text",
+  "edited_text",
+  "original_error_type",
+  "final_error_type",
+  "original_severity",
+  "final_severity",
+  "rejection_reason",
+  "comment",
+  "notes",
+  "updated_at",
+];
+
+const SEGMENT_INDEX = new Map(DATA.segments.map((segment) => [segment.id, segment]));
+
+const ui = {
+  saveMessage: "",
+  saveClass: "save-ok",
+  claimError: "",
+  suggestError: "",
+  suggestNotice: "",
+  suggestOpen: false,
+  guideOpen: false,
+  suggestDraft: {},
+  rejecting: {},
+  rejectDraft: {},
+  editing: {},
+};
+
+/*__SPAN_START__*/
+function countOf(haystack, needle) {
+  if (!needle) return 0;
+  let count = 0;
+  let index = 0;
+  while (index <= haystack.length) {
+    const found = haystack.indexOf(needle, index);
+    if (found === -1) return count;
+    count += 1;
+    index = found + needle.length;
+  }
+  return count;
+}
+
+function findLongestMatch(a, b, alo, ahi, blo, bhi) {
+  let bestLen = 0;
+  let bestI = alo;
+  let bestJ = blo;
+  let prev = new Map();
+  for (let i = alo; i < ahi; i += 1) {
+    const next = new Map();
+    for (let j = blo; j < bhi; j += 1) {
+      if (a[i] !== b[j]) continue;
+      const len = (prev.get(j - 1) || 0) + 1;
+      next.set(j, len);
+      if (len > bestLen) {
+        bestLen = len;
+        bestI = i - len + 1;
+        bestJ = j - len + 1;
+      }
+    }
+    prev = next;
+  }
+  return { i: bestI, j: bestJ, len: bestLen };
+}
+
+function matchingBlocks(a, b) {
+  const blocks = [];
+  const stack = [[0, a.length, 0, b.length]];
+  while (stack.length) {
+    const [alo, ahi, blo, bhi] = stack.pop();
+    if (alo >= ahi || blo >= bhi) continue;
+    const match = findLongestMatch(a, b, alo, ahi, blo, bhi);
+    if (!match.len) continue;
+    blocks.push(match);
+    stack.push([alo, match.i, blo, match.j]);
+    stack.push([match.i + match.len, ahi, match.j + match.len, bhi]);
+  }
+  blocks.push({ i: a.length, j: b.length, len: 0 });
+  blocks.sort((left, right) => left.i - right.i || left.j - right.j);
+  return blocks;
+}
+
+function getOpcodes(a, b) {
+  const ops = [];
+  let i = 0;
+  let j = 0;
+  matchingBlocks(a, b).forEach((match) => {
+    if (i < match.i && j < match.j) ops.push(["replace", i, match.i, j, match.j]);
+    else if (i < match.i) ops.push(["delete", i, match.i, j, j]);
+    else if (j < match.j) ops.push(["insert", i, i, j, match.j]);
+    if (match.len) ops.push(["equal", match.i, match.i + match.len, match.j, match.j + match.len]);
+    i = match.i + match.len;
+    j = match.j + match.len;
+  });
+  return ops;
+}
+
+function realignSpan(originalText, start, end, newText) {
+  if (start == null || end == null) return [null, null, false];
+  if (start < 0 || end < start || end > originalText.length) return [null, null, true];
+  if (originalText === newText && end <= newText.length) return [start, end, false];
+  const snippet = originalText.slice(start, end);
+  if (snippet) {
+    const count = countOf(newText, snippet);
+    if (count === 1) {
+      const idx = newText.indexOf(snippet);
+      return [idx, idx + snippet.length, false];
+    }
+    if (count > 1) {
+      const idx = newText.indexOf(snippet);
+      return [idx, idx + snippet.length, true];
+    }
+  }
+  let mappedStart = null;
+  let mappedEnd = null;
+  getOpcodes(originalText, newText).forEach(([tag, i1, i2, j1]) => {
+    if (tag !== "equal") return;
+    const overlapStart = Math.max(i1, start);
+    const overlapEnd = Math.min(i2, end);
+    if (overlapEnd <= overlapStart) return;
+    const delta = overlapStart - i1;
+    const chunkStart = j1 + delta;
+    const chunkEnd = chunkStart + (overlapEnd - overlapStart);
+    if (mappedStart == null) mappedStart = chunkStart;
+    mappedEnd = chunkEnd;
+  });
+  if (mappedStart != null && mappedEnd != null && mappedEnd > mappedStart) {
+    return [mappedStart, mappedEnd, true];
+  }
+  return [null, null, true];
+}
+/*__SPAN_END__*/
+
+function h(tag, props, ...children) {
+  const node = document.createElement(tag);
+  if (props) {
+    Object.entries(props).forEach(([key, value]) => {
+      if (value == null) return;
+      if (key === "class") node.className = value;
+      else if (key === "text") node.textContent = String(value);
+      else if (typeof value === "function" && key.startsWith("on")) {
+        node.addEventListener(key.slice(2).toLowerCase(), value);
+      } else if (key === "disabled" || key === "checked" || key === "open" || key === "hidden" || key === "selected") {
+        node[key] = Boolean(value);
+      } else if (value !== false) {
+        node.setAttribute(key, value === true ? "" : String(value));
+      }
+    });
+  }
+  children.forEach((child) => {
+    if (child == null || child === false) return;
+    node.append(child instanceof Node ? child : document.createTextNode(String(child)));
+  });
+  return node;
+}
+
+function freshState() {
+  return {
+    version: 1,
+    batches: [],
+    annotations: {},
+    suggestions: [],
+    screen: "dashboard",
+    openBatchId: null,
+    selectedBatchId: null,
+    myOnly: true,
+  };
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return freshState();
+    const parsed = JSON.parse(raw);
+    if (!parsed || parsed.version !== 1 || !Array.isArray(parsed.batches)) return freshState();
+    parsed.annotations = parsed.annotations && typeof parsed.annotations === "object" ? parsed.annotations : {};
+    parsed.suggestions = Array.isArray(parsed.suggestions) ? parsed.suggestions : [];
+    parsed.myOnly = parsed.myOnly !== false;
+    parsed.batches = parsed.batches.filter((batch) => {
+      batch.segmentIds = (batch.segmentIds || []).filter((id) => SEGMENT_INDEX.has(id));
+      const max = Math.max(batch.segmentIds.length, 1);
+      batch.position = Math.min(Math.max(parseInt(batch.position, 10) || 1, 1), max);
+      batch.owner = DEMO_NAME;
+      return batch.segmentIds.length > 0;
+    });
+    if (!parsed.batches.some((batch) => batch.id === parsed.openBatchId)) {
+      parsed.screen = "dashboard";
+      parsed.openBatchId = null;
+    }
+    return parsed;
+  } catch (err) {
+    return freshState();
+  }
+}
+
+let state = loadState();
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
+function uid(prefix) {
+  if (window.crypto && crypto.randomUUID) return prefix + crypto.randomUUID();
+  return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
+function clip(text, max) {
+  const flat = String(text || "").replace(/\s+/g, " ").trim();
+  return flat.length > max ? flat.slice(0, max - 1) + "…" : flat;
+}
+
+function choice(value, allowed, fallback) {
+  return allowed.includes(value) ? value : fallback;
+}
+
+function candidatesIn(batch) {
+  const rows = [];
+  batch.segmentIds.forEach((id) => {
+    const segment = SEGMENT_INDEX.get(id);
+    if (segment) rows.push(...segment.candidates);
+  });
+  return rows;
+}
+
+function isResolved(candidateId) {
+  const ann = state.annotations[candidateId];
+  return !!ann && (ann.status === "validated" || ann.status === "rejected");
+}
+
+function syncStatuses() {
+  state.batches.forEach((batch) => {
+    const cards = candidatesIn(batch);
+    const resolved = cards.filter((candidate) => isResolved(candidate.id)).length;
+    batch.status = cards.length && resolved === cards.length ? "completed" : "active";
+  });
+}
+
+function persist() {
+  syncStatuses();
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    return true;
+  } catch (err) {
+    ui.saveMessage = "This browser blocked local storage. Use Export Annotations to keep a copy.";
+    ui.saveClass = "save-fail";
+    return false;
+  }
+}
+
+function clearFlash() {}
+
+function flash() {}
+
+function markSaved(andRender) {
+  ui.saveMessage = "Saved in this browser only. The live database is unchanged.";
+  ui.saveClass = "save-ok";
+  const ok = persist();
+  if (!ok) {
+    const node = document.getElementById("saveStatus");
+    if (node) {
+      node.className = ui.saveClass;
+      node.textContent = ui.saveMessage;
+    }
+    return;
+  }
+  if (andRender) render();
+  else {
+    const node = document.getElementById("saveStatus");
+    if (node) {
+      node.className = "save-ok";
+      node.textContent = ui.saveMessage;
+    }
+  }
+}
+
+function ensureAnnotation(candidate) {
+  if (!state.annotations[candidate.id]) {
+    state.annotations[candidate.id] = {
+      status: "draft",
+      editedText: candidate.text,
+      errorType: candidate.type,
+      severity: candidate.severity,
+      rejectionReason: null,
+      comment: null,
+      updatedAt: nowIso(),
+    };
+  }
+  return state.annotations[candidate.id];
+}
+
+function viewModel(candidate) {
+  const ann = state.annotations[candidate.id];
+  const status = ann && (ann.status === "validated" || ann.status === "rejected") ? ann.status : "draft";
+  return {
+    ann,
+    status,
+    text: ann && typeof ann.editedText === "string" ? ann.editedText : candidate.text,
+    errorType: choice(ann && ann.errorType, ERROR_TYPES, candidate.type),
+    severity: choice(ann && ann.severity, SEVERITIES, candidate.severity),
+    locked: status === "validated" || status === "rejected",
+  };
+}
+
+function fillHighlight(container, text, start, end, approximate, strike) {
+  container.replaceChildren();
+  if (start == null || end == null || start < 0 || end > text.length || start >= end) {
+    container.append(document.createTextNode(text));
+    return;
+  }
+  container.append(document.createTextNode(text.slice(0, start)));
+  let markClass = strike ? "err-span strike" : "err-span";
+  if (approximate) markClass += " approx";
+  container.append(h("span", { class: markClass, text: text.slice(start, end) }));
+  container.append(document.createTextNode(text.slice(end)));
+}
+
+function regionOf(candidate, model, segment) {
+  const ann = state.annotations[candidate.id];
+  if (model.errorType === "Omission") {
+    const base = model.text;
+    const hasCustom = ann && typeof ann.omittedText === "string";
+    const omitted = hasCustom
+      ? ann.omittedText
+      : (candidate.rs != null && candidate.re != null ? segment.reference.slice(candidate.rs, candidate.re) : "");
+    let ip = hasCustom && ann.insertAt != null ? ann.insertAt : candidate.ip;
+    if (ip == null || ip < 0 || ip > base.length) ip = base.length;
+    return {
+      text: base.slice(0, ip) + omitted + base.slice(ip),
+      start: omitted ? ip : null,
+      end: omitted ? ip + omitted.length : null,
+      strike: true,
+      approximate: false,
+    };
+  }
+  const edited = model.text;
+  if (ann && ann.spanStart != null && ann.spanEnd != null && ann.spanStart >= 0 && ann.spanEnd > ann.spanStart && ann.spanEnd <= edited.length) {
+    return { text: edited, start: ann.spanStart, end: ann.spanEnd, strike: false, approximate: false };
+  }
+  let start = candidate.ts;
+  let end = candidate.te;
+  let approximate = false;
+  if (edited !== candidate.text) {
+    const realigned = realignSpan(candidate.text, candidate.ts, candidate.te, edited);
+    start = realigned[0];
+    end = realigned[1];
+    approximate = !!realigned[2];
+  }
+  return { text: edited, start, end, strike: false, approximate };
+}
+
+function withTags(text, start, end) {
+  if (start == null || end == null || start < 0 || end > text.length || start >= end) return text;
+  return text.slice(0, start) + "<" + text.slice(start, end) + ">" + text.slice(end);
+}
+
+function parseTags(raw) {
+  const open = raw.indexOf("<");
+  const close = open === -1 ? -1 : raw.indexOf(">", open + 1);
+  const nested = open === -1 ? -1 : raw.indexOf("<", open + 1);
+  if (open === -1 || close === -1 || nested !== -1 || raw.slice(close + 1).includes(">")) {
+    return { text: raw.replace(/[<>]/g, ""), start: null, end: null };
+  }
+  const before = raw.slice(0, open);
+  const mid = raw.slice(open + 1, close);
+  const after = raw.slice(close + 1);
+  return { text: before + mid + after, start: before.length, end: before.length + mid.length };
+}
+
+function applyEditor(candidate, raw) {
+  const parsed = parseTags(raw);
+  const ann = ensureAnnotation(candidate);
+  const type = ann.errorType || candidate.type;
+  if (type === "Omission") {
+    if (parsed.start == null || parsed.end === parsed.start) {
+      ann.editedText = parsed.text;
+      ann.omittedText = "";
+      ann.insertAt = 0;
+    } else {
+      ann.omittedText = parsed.text.slice(parsed.start, parsed.end);
+      ann.insertAt = parsed.start;
+      ann.editedText = parsed.text.slice(0, parsed.start) + parsed.text.slice(parsed.end);
+    }
+    ann.spanStart = null;
+    ann.spanEnd = null;
+  } else {
+    ann.editedText = parsed.text;
+    ann.spanStart = parsed.start;
+    ann.spanEnd = parsed.end === parsed.start ? null : parsed.end;
+    ann.omittedText = null;
+    ann.insertAt = null;
+  }
+  ann.updatedAt = nowIso();
+}
+
+function updatePreview(slot, candidate, model, segment) {
+  slot.replaceChildren();
+  const region = regionOf(candidate, model, segment);
+  const row = h("div", { class: "span-preview sentence" });
+  fillHighlight(row, region.text, region.start, region.end, region.approximate, region.strike);
+  slot.append(row);
+  if (region.start == null && model.text !== candidate.text && !region.strike) {
+    slot.append(h("div", { class: "span-note", text: "Highlight unavailable after the edit (original span metadata was kept)." }));
+  } else if (region.approximate) {
+    slot.append(h("div", { class: "span-note", text: "Approximate highlight after editing — original offsets were preserved." }));
+  }
+}
+
+function remainingSegments() {
+  const taken = new Set(state.batches.flatMap((batch) => batch.segmentIds));
+  return DATA.segments.filter((segment) => !taken.has(segment.id));
+}
+
+function currentBatch() {
+  return state.batches.find((batch) => batch.id === state.openBatchId) || null;
+}
+
+function statusLabel(status) {
+  if (status === "active") return "In progress";
+  if (status === "completed") return "Completed";
+  return status;
+}
+
+function batchStats(batch) {
+  const cards = candidatesIn(batch);
+  const resolved = cards.filter((candidate) => isResolved(candidate.id)).length;
+  return { resolved, total: cards.length };
+}
+
+function guide() {
+  const details = h("details", { class: "guide", open: ui.guideOpen },
+    h("summary", { text: "How To Guide" }),
+    h("h3", { text: "This demo" }),
+    h("p", { text: "You are looking at a clickable preview of the Translation Commons Benchmark Builder. There is no login. Validate, reject, edit, and suggest as you would in the live tool. Everything you change is stored in this browser only. Reset Demo erases that local copy. Export Annotations downloads a CSV to this computer. The live database is unchanged." }),
+    h("h3", { text: "Annotation rules" }),
+    h("p", { text: "You are checking synthetic translation errors. Each card is one generated candidate that should contain exactly one intended error." }),
+    h("p", { text: "Validate only when all of the following are true:" }),
+    h("ol", {},
+      h("li", { text: "The target sentence contains exactly one intended error." }),
+      h("li", { text: "That error matches the selected type (Mistranslation / Addition / Omission) and severity (Minor / Major)." }),
+      h("li", { text: "There are no unrelated grammatical, fluency, or plausibility problems." })
+    ),
+    h("p", { text: "You may edit the sentence and the labels before validating." }),
+    h("p", { text: "Reject a candidate when:" }),
+    h("ul", {},
+      h("li", { text: "There is no meaningful error." }),
+      h("li", { text: "There are multiple errors." }),
+      h("li", { text: "Grammar, fluency, or plausibility is broken in a way that is not the intended error." }),
+      h("li", { text: "The perturbation is incorrect or unclear." }),
+      h("li", { text: "Other (add a comment)." })
+    ),
+    h("h3", { text: "Interface" }),
+    h("ul", {},
+      h("li", { text: "The blue panel is the source and the reference. Both are read-only." }),
+      h("li", { text: "Each card shows the suggested error. Underlines and strikethroughs are a visual aid only. Use the pen to edit; angle brackets mark the error region and are not part of the sentence." }),
+      h("li", { text: "(+) Suggest an additional error is optional and is stored separately from generated candidates." }),
+      h("li", { text: "Back and Next keep saved work. You may skip incomplete cards and return later." }),
+      h("li", { text: "Work is saved in this browser. Use Save to confirm a local save. Nothing is sent to a server." }),
+      h("li", { text: "A segment is resolved when every generated candidate is validated or rejected." })
+    ),
+    h("h3", { text: "Independence" }),
+    h("p", { text: "Do not discuss items with other annotators until you have finished your own annotations. Overlap items exist so agreement can be measured later." })
+  );
+  details.addEventListener("toggle", () => { ui.guideOpen = details.open; });
+  return details;
+}
+
+function renderHeader(lines) {
+  const box = h("div", { class: "userbox" });
+  lines.forEach((line, index) => {
+    if (index) box.append(h("br"));
+    box.append(document.createTextNode(line));
+  });
+  return h("header", { class: "app-header" },
+    h("div", {},
+      h("h1", {}, "Translation Commons Benchmark Builder ", h("span", { class: "badge", text: "Demo" })),
+      guide()
+    ),
+    box
+  );
+}
+
+const DUMMY_BATCHES = [
+  { pair: "English → French", batch: "1", size: "40", status: "Not started", owner: "—", progress: "0 / 40", claimable: true },
+  { pair: "English → Portuguese", batch: "1", size: "36", status: "WIP", owner: "Miguel Santos", progress: "11 / 36", claimable: false },
+  { pair: "English → German", batch: "1", size: "40", status: "Not started", owner: "—", progress: "0 / 40", claimable: true },
+  { pair: "English → Italian", batch: "1", size: "32", status: "Completed", owner: "Giulia Romano", progress: "32 / 32", claimable: false },
+  { pair: "English → Dutch", batch: "1", size: "28", status: "Not started", owner: "—", progress: "0 / 28", claimable: true },
+  { pair: "English → Polish", batch: "1", size: "30", status: "WIP", owner: "Anna Kowalska", progress: "7 / 30", claimable: false },
+  { pair: "English → Chinese", batch: "1", size: "45", status: "Not started", owner: "—", progress: "0 / 45", claimable: true },
+  { pair: "English → Japanese", batch: "1", size: "38", status: "Not started", owner: "—", progress: "0 / 38", claimable: true },
+  { pair: "English → Korean", batch: "1", size: "34", status: "WIP", owner: "Min-jun Park", progress: "16 / 34", claimable: false },
+  { pair: "English → Arabic", batch: "1", size: "42", status: "Not started", owner: "—", progress: "0 / 42", claimable: true },
+  { pair: "English → Hindi", batch: "1", size: "30", status: "Completed", owner: "Priya Shah", progress: "30 / 30", claimable: false },
+];
+
+function resolvedSegments(batch) {
+  let resolved = 0;
+  batch.segmentIds.forEach((id) => {
+    const segment = SEGMENT_INDEX.get(id);
+    if (segment && segment.candidates.length && segment.candidates.every((candidate) => isResolved(candidate.id))) {
+      resolved += 1;
+    }
+  });
+  return resolved;
+}
+
+function statusPill(status) {
+  const kind = status === "WIP" ? "pill-wip" : status === "Completed" ? "pill-done" : "pill-new";
+  return h("span", { class: "pill " + kind, text: status });
+}
+
+function spanishCatalogRow() {
+  const mine = state.batches.find((batch) => batch.segmentIds && batch.segmentIds.length);
+  if (!mine) {
+    return {
+      pair: "English → Spanish",
+      batch: "2",
+      size: String(DATA.segments.length),
+      status: "Not started",
+      owner: "—",
+      progress: "0 / " + DATA.segments.length,
+      action: "claim-spanish",
+    };
+  }
+  const total = mine.segmentIds.length;
+  const resolved = resolvedSegments(mine);
+  const done = mine.status === "completed" || (total > 0 && resolved === total);
+  return {
+    pair: "English → Spanish",
+    batch: "2",
+    size: String(total),
+    status: done ? "Completed" : "WIP",
+    owner: DEMO_NAME,
+    progress: resolved + " / " + total,
+    action: done ? "view" : "resume",
+    id: mine.id,
+  };
+}
+
+function rowAction(row) {
+  if (row.action === "claim-spanish") {
+    return h("button", { class: "primary tiny claim", type: "button", text: "Claim This Batch", onclick: claimBatch });
+  }
+  if (row.action === "claim-dummy") {
+    return h("button", {
+      class: "primary tiny claim",
+      type: "button",
+      text: "Claim This Batch",
+      onclick: () => {
+        ui.claimError = "Only the English → Spanish sample includes segments in this demo.";
+        render();
+      },
+    });
+  }
+  if (row.action === "resume" || row.action === "view") {
+    return h("button", {
+      class: "secondary tiny",
+      type: "button",
+      text: row.action === "resume" ? "Resume" : "View",
+      onclick: () => openBatch(row.id),
+    });
+  }
+  return document.createTextNode("—");
+}
+
+function renderDashboard() {
+  const root = h("div");
+  root.append(renderHeader([DEMO_NAME, "Demo session"]));
+  root.append(h("h2", { text: "Batches" }));
+  if (ui.claimError) root.append(h("div", { class: "alert warn", role: "alert", text: ui.claimError }));
+
+  const rows = [
+    {
+      pair: "English → Spanish",
+      batch: "1",
+      size: String(DATA.segments.length),
+      status: "WIP",
+      owner: "Elena Vargas",
+      progress: "18 / " + DATA.segments.length,
+      action: "none",
+    },
+    spanishCatalogRow(),
+    ...DUMMY_BATCHES.map((row) => ({
+      ...row,
+      action: row.claimable ? "claim-dummy" : "none",
+    })),
+  ];
+
+  const table = h("table");
+  table.append(h("thead", {}, h("tr", {},
+    ...["Language pair", "Batch", "Size", "Status", "Owner", "Progress", "Action"].map((label) => h("th", { scope: "col", text: label }))
+  )));
+  const body = h("tbody");
+  rows.forEach((row) => {
+    body.append(h("tr", {},
+      h("td", { text: row.pair }),
+      h("td", { text: row.batch }),
+      h("td", { text: row.size }),
+      h("td", {}, statusPill(row.status)),
+      h("td", { text: row.owner }),
+      h("td", { text: row.progress }),
+      h("td", {}, rowAction(row))
+    ));
+  });
+  table.append(body);
+  root.append(h("div", { class: "table-wrap" }, table));
+  return root;
+}
+
+function claimBatch() {
+  ui.claimError = "";
+  if (state.batches.some((batch) => batch.status === "active")) {
+    ui.claimError = "You already have an active batch.";
+    render();
+    return;
+  }
+  const available = remainingSegments();
+  if (!available.length) {
+    ui.claimError = "No eligible segments available to claim for this language pair.";
+    render();
+    return;
+  }
+  const chosen = available.slice(0, DATA.batchSize);
+  const number = state.batches.reduce((max, batch) => Math.max(max, batch.number || 0), 0) + 1;
+  const batch = {
+    id: "batch-" + number,
+    number,
+    status: "active",
+    owner: DEMO_NAME,
+    segmentIds: chosen.map((segment) => segment.id),
+    position: 1,
+    claimedAt: nowIso(),
+  };
+  state.batches.unshift(batch);
+  state.selectedBatchId = batch.id;
+  state.openBatchId = batch.id;
+  state.screen = "workspace";
+  ui.saveMessage = "";
+  persist();
+  render();
+  window.scrollTo(0, 0);
+}
+
+function openBatch(id) {
+  const batch = state.batches.find((item) => item.id === id);
+  if (!batch) return;
+  state.selectedBatchId = id;
+  state.openBatchId = id;
+  state.screen = "workspace";
+  ui.suggestError = "";
+  ui.suggestNotice = "";
+  persist();
+  render();
+  window.scrollTo(0, 0);
+}
+
+function goDashboard() {
+  flushEditors();
+  state.screen = "dashboard";
+  ui.suggestError = "";
+  persist();
+  render();
+  window.scrollTo(0, 0);
+}
+
+function renderWorkspace() {
+  const batch = currentBatch();
+  const root = h("div");
+  if (!batch) return root;
+  const total = batch.segmentIds.length;
+  batch.position = Math.min(Math.max(batch.position || 1, 1), Math.max(total, 1));
+  const segment = SEGMENT_INDEX.get(batch.segmentIds[batch.position - 1]);
+  if (!segment) {
+    root.append(renderHeader(["Linguist: " + DEMO_NAME]));
+    root.append(h("p", { text: "This segment is missing from the embedded pilot." }));
+    root.append(h("button", { class: "secondary", type: "button", text: "← Batches", onclick: goDashboard }));
+    return root;
+  }
+  const counts = { validated: 0, rejected: 0, incomplete: 0 };
+  candidatesIn(batch).forEach((candidate) => {
+    const status = viewModel(candidate).status;
+    if (status === "validated") counts.validated += 1;
+    else if (status === "rejected") counts.rejected += 1;
+    else counts.incomplete += 1;
+  });
+
+  root.append(renderHeader([
+    "Target: " + DATA.targetLabel,
+    "Batch #: " + batch.number,
+    "Linguist: " + DEMO_NAME,
+  ]));
+  root.append(h("button", { class: "linkish", type: "button", text: "← Batches", onclick: goDashboard }));
+  root.append(h("p", { class: "counts", text: "Validated " + counts.validated + " · Rejected " + counts.rejected + " · Incomplete " + counts.incomplete }));
+  root.append(h("div", { id: "saveStatus", class: ui.saveClass, role: "status", "aria-live": "polite", text: ui.saveMessage || "" }));
+
+  const banner = h("div", { class: "segment-banner" });
+  banner.append(h("div", { class: "progress", text: "Segment " + batch.position + " / " + total }));
+  banner.append(h("div", { class: "k", text: "Source" }));
+  banner.append(h("div", { class: "line sentence", lang: "en", text: segment.source }));
+  banner.append(h("div", { class: "k", text: "Reference" }));
+  banner.append(h("div", { class: "line sentence", lang: "es", text: segment.reference }));
+  root.append(banner);
+  if (segment.candidates.length && segment.candidates.every((candidate) => isResolved(candidate.id))) {
+    root.append(h("p", { class: "status-validated", text: "This segment is resolved." }));
+  }
+  if (batch.status === "completed") {
+    root.append(h("div", { class: "alert ok", text: "This batch is complete. Every generated candidate is validated or rejected. Suggestions were optional." }));
+  }
+
+  segment.candidates.forEach((candidate) => root.append(renderCard(batch, segment, candidate)));
+  root.append(renderSuggestions(batch, segment));
+
+  const jump = h("select", { id: "jumpSegment", "aria-label": "Jump to segment" });
+  batch.segmentIds.forEach((id, index) => {
+    const item = SEGMENT_INDEX.get(id);
+    const option = h("option", { value: String(index + 1), text: (index + 1) + ". " + clip(item.source, 78) });
+    if (index + 1 === batch.position) option.selected = true;
+    jump.append(option);
+  });
+  jump.addEventListener("change", () => {
+    flushEditors();
+    batch.position = parseInt(jump.value, 10);
+    ui.suggestError = "";
+    ui.suggestNotice = "";
+    persist();
+    render();
+    window.scrollTo(0, 0);
+  });
+  root.append(h("label", { class: "field" }, h("span", { text: "Jump to segment" }), jump));
+
+  root.append(h("div", { class: "nav" },
+    h("button", {
+      class: "secondary",
+      type: "button",
+      text: "← Back",
+      disabled: batch.position <= 1,
+      onclick: () => move(batch, -1),
+    }),
+    h("button", { class: "secondary", type: "button", text: "Save", onclick: () => { flushEditors(); markSaved(false); } }),
+    h("button", {
+      class: "secondary",
+      type: "button",
+      text: "Next →",
+      disabled: batch.position >= total,
+      onclick: () => move(batch, 1),
+    })
+  ));
+  return root;
+}
+
+function move(batch, delta) {
+  flushEditors();
+  const total = batch.segmentIds.length;
+  batch.position = Math.min(total, Math.max(1, batch.position + delta));
+  ui.suggestError = "";
+  ui.suggestNotice = "";
+  persist();
+  render();
+  window.scrollTo(0, 0);
+}
+
+function renderCard(batch, segment, candidate) {
+  const model = viewModel(candidate);
+  const card = h("article", { class: "card", "data-cid": candidate.id });
+  const editing = !!ui.editing[candidate.id] && !model.locked;
+  const severity = h("select", { class: "pill", "aria-label": "Severity", disabled: model.locked });
+  SEVERITIES.forEach((value) => severity.append(h("option", { value, text: value })));
+  severity.value = model.severity;
+  severity.addEventListener("change", () => {
+    if (model.locked) return;
+    const ann = ensureAnnotation(candidate);
+    ann.severity = severity.value;
+    ann.updatedAt = nowIso();
+    markSaved(false);
+  });
+  const errorType = h("select", { class: "pill", "aria-label": "Error type", disabled: model.locked });
+  ERROR_TYPES.forEach((value) => errorType.append(h("option", { value, text: value })));
+  errorType.value = model.errorType;
+  errorType.addEventListener("change", () => {
+    if (model.locked) return;
+    const ann = ensureAnnotation(candidate);
+    ann.errorType = errorType.value;
+    ann.updatedAt = nowIso();
+    if (ui.editing[candidate.id]) {
+      const ta = document.getElementById("text-" + candidate.id);
+      if (ta) applyEditor(candidate, ta.value);
+      markSaved(false);
+      render();
+      return;
+    }
+    markSaved(false);
+    updatePreview(preview, candidate, { text: ann.editedText, errorType: ann.errorType }, segment);
+  });
+  const action = model.locked
+    ? h("button", { class: "secondary", type: "button", text: "Reopen", onclick: () => reopenCard(candidate) })
+    : h("button", { class: "primary", type: "button", text: "Validate ✓", onclick: () => validateCard(candidate) });
+  const lead = h("div", { class: "pills" }, severity, errorType);
+  if (model.status !== "draft") {
+    lead.append(h("span", { class: "card-state", text: model.status.charAt(0).toUpperCase() + model.status.slice(1) }));
+  }
+  card.append(h("div", { class: "card-top" },
+    lead,
+    h("div", { class: "card-actions" },
+      h("button", {
+        class: editing ? "icon-btn active" : "icon-btn",
+        type: "button",
+        text: "✏️",
+        title: editing ? "Finish editing" : "Edit",
+        "aria-label": editing ? "Finish editing" : "Edit",
+        disabled: model.locked,
+        onclick: () => toggleEdit(candidate),
+      }),
+      h("button", {
+        class: "reject",
+        type: "button",
+        text: "×",
+        title: "Reject",
+        "aria-label": "Reject",
+        disabled: model.locked,
+        onclick: () => startReject(candidate),
+      })
+    )
+  ));
+  const preview = h("div", { class: "preview-slot" });
+  const region = regionOf(candidate, model, segment);
+  if (editing) {
+    const textarea = h("textarea", {
+      id: "text-" + candidate.id,
+      class: "sentence",
+      "aria-label": "Edit target. Angle brackets mark the error region.",
+      lang: "es",
+    });
+    textarea.value = withTags(region.text, region.start, region.end);
+    card.append(textarea);
+    card.append(h("p", { class: "caption", text: model.errorType === "Omission"
+      ? "Text inside <> is the omitted span. It is shown with a strikethrough and is not part of the sentence."
+      : "Angle brackets mark the error region. They are not part of the sentence." }));
+  } else {
+    updatePreview(preview, candidate, model, segment);
+    card.append(preview);
+  }
+  card.append(h("div", { class: "card-foot" }, action));
+
+  if (ui.rejecting[candidate.id] && !model.locked) {
+    const draft = rejectDraft(candidate);
+    const reason = h("select", { id: "rej-reason-" + candidate.id, "aria-label": "Rejection reason" });
+    REASONS.forEach(([code, label]) => reason.append(h("option", { value: code, text: label })));
+    reason.value = draft.reason;
+    reason.addEventListener("change", () => { draft.reason = reason.value; });
+    const comment = h("input", { type: "text", "aria-label": "Comment (optional)", value: draft.comment });
+    comment.value = draft.comment;
+    comment.addEventListener("input", () => { draft.comment = comment.value; });
+    card.append(h("label", { class: "field" }, h("span", { text: "Rejection reason" }), reason));
+    card.append(h("label", { class: "field" }, h("span", { text: "Comment (optional)" }), comment));
+    card.append(h("div", { class: "split" },
+      h("button", { class: "primary", type: "button", text: "Confirm reject", onclick: () => confirmReject(candidate) }),
+      h("button", { class: "secondary", type: "button", text: "Cancel", onclick: () => cancelReject(candidate) })
+    ));
+  }
+  if (model.ann && model.ann.rejectionReason && model.status === "rejected") {
+    const label = REASON_LABEL[model.ann.rejectionReason] || model.ann.rejectionReason;
+    card.append(h("p", { class: "caption", text: "Rejection: " + label }));
+  }
+  return card;
+}
+
+function rejectDraft(candidate) {
+  if (!ui.rejectDraft[candidate.id]) {
+    const ann = state.annotations[candidate.id];
+    ui.rejectDraft[candidate.id] = {
+      reason: choice(ann && ann.rejectionReason, REASONS.map((item) => item[0]), REASONS[0][0]),
+      comment: (ann && ann.comment) || "",
+    };
+  }
+  return ui.rejectDraft[candidate.id];
+}
+
+function startReject(candidate) {
+  const model = viewModel(candidate);
+  if (model.locked) return;
+  ui.rejecting[candidate.id] = true;
+  rejectDraft(candidate);
+  render();
+  const focus = document.getElementById("rej-reason-" + candidate.id);
+  if (focus) focus.focus();
+}
+
+function cancelReject(candidate) {
+  delete ui.rejecting[candidate.id];
+  render();
+}
+
+function flushEditors() {
+  Object.keys(ui.editing).forEach((id) => {
+    const textarea = document.getElementById("text-" + id);
+    if (!textarea) return;
+    let candidate = null;
+    DATA.segments.some((segment) => {
+      candidate = segment.candidates.find((item) => item.id === id) || null;
+      return !!candidate;
+    });
+    if (candidate) applyEditor(candidate, textarea.value);
+  });
+}
+
+function toggleEdit(candidate) {
+  const model = viewModel(candidate);
+  if (model.locked) return;
+  if (ui.editing[candidate.id]) {
+    const textarea = document.getElementById("text-" + candidate.id);
+    if (textarea) applyEditor(candidate, textarea.value);
+    delete ui.editing[candidate.id];
+    markSaved(true);
+    return;
+  }
+  ui.editing[candidate.id] = true;
+  render();
+  const textarea = document.getElementById("text-" + candidate.id);
+  if (textarea) textarea.focus();
+}
+
+function confirmReject(candidate) {
+  const draft = rejectDraft(candidate);
+  const ann = ensureAnnotation(candidate);
+  const textarea = document.getElementById("text-" + candidate.id);
+  if (textarea) applyEditor(candidate, textarea.value);
+  delete ui.editing[candidate.id];
+  ann.status = "rejected";
+  ann.rejectionReason = draft.reason;
+  ann.comment = draft.comment ? draft.comment : null;
+  ann.updatedAt = nowIso();
+  delete ui.rejecting[candidate.id];
+  markSaved(true);
+}
+
+function validateCard(candidate) {
+  const ann = ensureAnnotation(candidate);
+  const textarea = document.getElementById("text-" + candidate.id);
+  if (textarea) applyEditor(candidate, textarea.value);
+  delete ui.editing[candidate.id];
+  ann.status = "validated";
+  ann.rejectionReason = null;
+  ann.updatedAt = nowIso();
+  delete ui.rejecting[candidate.id];
+  markSaved(true);
+}
+
+function reopenCard(candidate) {
+  const ann = ensureAnnotation(candidate);
+  ann.status = "draft";
+  ann.rejectionReason = null;
+  ann.updatedAt = nowIso();
+  markSaved(true);
+}
+
+function suggestionDraft(segmentId) {
+  if (!ui.suggestDraft[segmentId]) {
+    ui.suggestDraft[segmentId] = { text: "", errorType: ERROR_TYPES[0], severity: SEVERITIES[0], notes: "" };
+  }
+  return ui.suggestDraft[segmentId];
+}
+
+function renderSuggestions(batch, segment) {
+  const draft = suggestionDraft(segment.id);
+  const text = h("textarea", { "aria-label": "Suggested target sentence", lang: "es" });
+  text.value = draft.text;
+  text.addEventListener("input", () => { draft.text = text.value; });
+  const type = h("select", { "aria-label": "Error type" });
+  ERROR_TYPES.forEach((value) => type.append(h("option", { value, text: value })));
+  type.value = draft.errorType;
+  type.addEventListener("change", () => { draft.errorType = type.value; });
+  const severity = h("select", { "aria-label": "Severity" });
+  SEVERITIES.forEach((value) => severity.append(h("option", { value, text: value })));
+  severity.value = draft.severity;
+  severity.addEventListener("change", () => { draft.severity = severity.value; });
+  const notes = h("input", { type: "text", "aria-label": "Notes (optional)" });
+  notes.value = draft.notes;
+  notes.addEventListener("input", () => { draft.notes = notes.value; });
+  const body = [
+    h("label", { class: "field" }, h("span", { text: "Suggested target sentence" }), text),
+    h("div", { class: "split" },
+      h("label", { class: "field" }, h("span", { text: "Error type" }), type),
+      h("label", { class: "field" }, h("span", { text: "Severity" }), severity)
+    ),
+    h("label", { class: "field" }, h("span", { text: "Notes (optional)" }), notes),
+  ];
+  if (ui.suggestError) body.push(h("div", { class: "alert warn", text: ui.suggestError }));
+  if (ui.suggestNotice) body.push(h("div", { class: "alert ok", text: ui.suggestNotice }));
+  body.push(h("button", { class: "primary", type: "button", text: "Submit suggestion", onclick: () => submitSuggestion(segment, batch) }));
+  const mine = state.suggestions.filter((item) => item.segmentId === segment.id && item.batchId === batch.id);
+  mine.forEach((item) => {
+    body.push(h("div", { class: "suggest-item" },
+      h("p", { class: "caption", text: "Your suggestion (" + item.errorType + ", " + item.severity + ")" + (item.notes ? " — " + item.notes : "") }),
+      h("p", { lang: "es", text: item.text })
+    ));
+  });
+  const details = h("details", { class: "guide suggest", open: ui.suggestOpen },
+    h("summary", { text: "(+) Suggest an additional error" }),
+    ...body
+  );
+  details.addEventListener("toggle", () => { ui.suggestOpen = details.open; });
+  return details;
+}
+
+function submitSuggestion(segment, batch) {
+  const draft = suggestionDraft(segment.id);
+  ui.suggestOpen = true;
+  if (!draft.text.trim()) {
+    ui.suggestError = "Enter a suggested target sentence.";
+    ui.suggestNotice = "";
+    render();
+    return;
+  }
+  state.suggestions.push({
+    id: uid("sugg-"),
+    segmentId: segment.id,
+    batchId: batch.id,
+    text: draft.text.trim(),
+    errorType: choice(draft.errorType, ERROR_TYPES, ERROR_TYPES[0]),
+    severity: choice(draft.severity, SEVERITIES, SEVERITIES[0]),
+    notes: (draft.notes || "").trim(),
+    createdAt: nowIso(),
+  });
+  draft.text = "";
+  draft.notes = "";
+  ui.suggestError = "";
+  ui.suggestNotice = "Suggestion saved in this browser only. The live database is unchanged.";
+  markSaved(true);
+}
+
+function csvEscape(value) {
+  if (value == null) return "";
+  let text = String(value);
+  if (/^[=+\-@]/.test(text)) text = "'" + text;
+  if (/[",\r\n]/.test(text)) return '"' + text.replace(/"/g, '""') + '"';
+  return text;
+}
+
+function exportRows() {
+  const rows = [];
+  state.batches.forEach((batch) => {
+    batch.segmentIds.forEach((segmentId) => {
+      const segment = SEGMENT_INDEX.get(segmentId);
+      if (!segment) return;
+      segment.candidates.forEach((candidate) => {
+        const ann = state.annotations[candidate.id];
+        rows.push({
+          storage: "local-browser-demo",
+          record_kind: "annotation",
+          annotator_name: DEMO_NAME,
+          language_pair: DATA.pairLabel,
+          batch_number: batch.number,
+          batch_status: statusLabel(batch.status),
+          segment_external_id: segment.id,
+          sample_order: segment.order,
+          candidate_id: candidate.id,
+          status: ann && ann.status ? ann.status : "draft",
+          source_text: segment.source,
+          reference_text: segment.reference,
+          original_text: candidate.text,
+          edited_text: ann && typeof ann.editedText === "string" ? ann.editedText : candidate.text,
+          original_error_type: candidate.type,
+          final_error_type: ann && ann.errorType ? ann.errorType : candidate.type,
+          original_severity: candidate.severity,
+          final_severity: ann && ann.severity ? ann.severity : candidate.severity,
+          rejection_reason: ann && ann.rejectionReason ? (REASON_LABEL[ann.rejectionReason] || ann.rejectionReason) : "",
+          comment: ann && ann.comment ? ann.comment : "",
+          notes: "",
+          updated_at: ann && ann.updatedAt ? ann.updatedAt : "",
+        });
+      });
+    });
+  });
+  state.suggestions.forEach((item) => {
+    const segment = SEGMENT_INDEX.get(item.segmentId);
+    const batch = state.batches.find((entry) => entry.id === item.batchId);
+    rows.push({
+      storage: "local-browser-demo",
+      record_kind: "suggestion",
+      annotator_name: DEMO_NAME,
+      language_pair: DATA.pairLabel,
+      batch_number: batch ? batch.number : "",
+      batch_status: batch ? statusLabel(batch.status) : "",
+      segment_external_id: item.segmentId,
+      sample_order: segment ? segment.order : "",
+      candidate_id: "",
+      status: "suggestion",
+      source_text: segment ? segment.source : "",
+      reference_text: segment ? segment.reference : "",
+      original_text: "",
+      edited_text: item.text,
+      original_error_type: "",
+      final_error_type: item.errorType,
+      original_severity: "",
+      final_severity: item.severity,
+      rejection_reason: "",
+      comment: "",
+      notes: item.notes || "",
+      updated_at: item.createdAt || "",
+    });
+  });
+  return rows;
+}
+
+function exportAnnotations() {
+  const rows = exportRows();
+  const lines = [EXPORT_COLUMNS.join(",")];
+  rows.forEach((row) => {
+    lines.push(EXPORT_COLUMNS.map((column) => csvEscape(row[column])).join(","));
+  });
+  const blob = new Blob(["\uFEFF" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = h("a", { href: url, download: "tcb-demo-annotations.csv" });
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  if (!rows.length) {
+    flash("Downloaded tcb-demo-annotations.csv with headers only. Claim a batch to include annotations. The file stayed on this computer.");
+  } else {
+    flash("Downloaded tcb-demo-annotations.csv (" + rows.length + " rows) to this computer. The live database is unchanged.");
+  }
+}
+
+function resetDemo() {
+  const ok = window.confirm("Reset the demo? Annotations stored in this browser will be erased. The embedded pilot sentences stay, and the live database is unchanged.");
+  if (!ok) return;
+  try { localStorage.removeItem(STORAGE_KEY); } catch (err) { /* storage may be blocked */ }
+  state = freshState();
+  ui.saveMessage = "";
+  ui.saveClass = "save-ok";
+  ui.claimError = "";
+  ui.suggestError = "";
+  ui.suggestNotice = "";
+  ui.suggestOpen = false;
+  ui.suggestDraft = {};
+  ui.rejecting = {};
+  ui.rejectDraft = {};
+  ui.editing = {};
+  render();
+  window.scrollTo(0, 0);
+}
+
+function render() {
+  clearFlash();
+  syncStatuses();
+  const app = document.getElementById("app");
+  const batch = currentBatch();
+  if (state.screen === "workspace" && batch) app.replaceChildren(renderWorkspace());
+  else {
+    state.screen = "dashboard";
+    app.replaceChildren(renderDashboard());
+  }
+}
+
+document.getElementById("resetBtn").addEventListener("click", resetDemo);
+document.addEventListener("keydown", (event) => {
+  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
+    event.preventDefault();
+    if (state.screen === "workspace") {
+      flushEditors();
+      markSaved(false);
+    }
+  }
+});
+render();
+
+</script>
+</body>
+</html>

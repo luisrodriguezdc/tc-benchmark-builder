@@ -180,6 +180,7 @@ CREATE TABLE batch_items (
   batch_id uuid NOT NULL REFERENCES batches (id) ON DELETE CASCADE,
   segment_id uuid NOT NULL REFERENCES segments (id),
   position integer NOT NULL,
+  source_error boolean NOT NULL DEFAULT false,
   UNIQUE (batch_id, position),
   UNIQUE (batch_id, segment_id)
 );

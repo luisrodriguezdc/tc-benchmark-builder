@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="description" content="Demo of the Translation Commons Benchmark Builder. Annotations stay in this browser and are not saved to the live database.">
+<title>Translation Commons Benchmark Builder — Demo</title>
+<style>
+  :root {
+    --text: #31333f;
+    --muted: #5c616c;
+    --line: rgba(49, 51, 63, 0.2);
+    --primary: #3697b3;
+    --yellow: #f6e28b;
+    --ink: #1f2328;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    color: var(--text);
+    background: #fff;
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.45;
+  }
+  button, select, textarea, input { font: inherit; color: inherit; }
+  button:focus-visible, select:focus-visible, textarea:focus-visible, input:focus-visible {
+    outline: 2px solid #3697b3;
+    outline-offset: 2px;
+  }
+  .reset-dock {
+    position: fixed;
+    right: 1.25rem;
+    bottom: 1.25rem;
+    z-index: 20;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 0.5rem;
+    min-height: 38px;
+    padding: 0.4rem 0.9rem;
+    cursor: pointer;
+    box-shadow: 0 2px 10px rgba(49, 51, 63, 0.14);
+  }
+  .reset-dock:hover { border-color: var(--primary); color: var(--primary); }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 1.15rem 1rem 4.5rem; }
+  .pill {
+    display: inline-block;
+    border-radius: 999px;
+    padding: 0.12rem 0.55rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .pill-wip { background: #fff6e0; color: #6b4e00; }
+  .pill-new { background: #e8f1fb; color: #0f3a5f; }
+  .pill-done { background: #e7f6ec; color: #146c36; }
+  button.claim { white-space: nowrap; }
+  .app-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 250px;
+    gap: 1rem;
+    align-items: start;
+    margin-bottom: 0.85rem;
+  }
+  h1 { font-size: 1.35rem; font-weight: 700; margin: 0 0 0.35rem; line-height: 1.3; }
+  h2 { font-size: 1.12rem; font-weight: 700; margin: 0.15rem 0 0.55rem; }
+  h3 { font-size: 1rem; margin: 0.85rem 0 0.3rem; }
+  .badge {
+    display: inline-block;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: var(--yellow);
+    color: #5c4b12;
+    border-radius: 999px;
+    padding: 0.12rem 0.45rem;
+    vertical-align: middle;
+    margin-left: 0.15rem;
+  }
+  .userbox {
+    border: 1px solid #c5c9ce;
+    border-radius: 6px;
+    padding: 0.55rem 0.75rem;
+    font-size: 0.85rem;
+    background: #fff;
+    line-height: 1.45;
+  }
+  .guide {
+    border: 1px solid var(--line);
+    border-radius: 0.5rem;
+    padding: 0.45rem 0.8rem 0.55rem;
+    background: #fff;
+  }
+  .guide summary { cursor: pointer; font-weight: 700; }
+  .guide ul, .guide ol { margin: 0.25rem 0 0.55rem; padding-left: 1.2rem; }
+  .guide p { margin: 0.35rem 0; }
+  .field { display: flex; flex-direction: column; gap: 0.28rem; font-size: 0.92rem; font-weight: 700; margin: 0.35rem 0 0.7rem; }
+  .field span { font-weight: 700; }
+  .check { display: flex; align-items: center; gap: 0.45rem; font-weight: 600; margin: 0.2rem 0 0.7rem; }
+  select, textarea, input[type="text"] {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 0.5rem;
+    padding: 0.45rem 0.65rem;
+    background: #fff;
+    min-height: 38px;
+    font-weight: 400;
+    color: #000;
+  }
+  select option { color: #000; }
+  select.pill {
+    width: auto;
+    border-radius: 999px;
+    padding: 0.1rem 1.7rem 0.1rem 0.75rem;
+    min-height: 0;
+    height: 30px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #000;
+    background: #fff;
+  }
+  textarea { min-height: 90px; resize: vertical; line-height: 1.45; }
+  button.primary, button.secondary {
+    border-radius: 0.5rem;
+    padding: 0.4rem 0.85rem;
+    min-height: 38px;
+    cursor: pointer;
+  }
+  button.primary { background: var(--primary); color: #fff; border: 1px solid var(--primary); }
+  button.primary:hover:not(:disabled) { background: #2c7f98; border-color: #2c7f98; }
+  button.secondary { background: #fff; color: var(--text); border: 1px solid var(--line); }
+  button.secondary:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+  button.tiny { min-height: 32px; padding: 0.15rem 0.6rem; font-size: 0.88rem; }
+  button.reject {
+    width: 34px; height: 34px; min-height: 34px; padding: 0;
+    border-radius: 0.5rem; border: 1px solid var(--line); background: #fff;
+    cursor: pointer; font-size: 1.15rem; line-height: 1;
+  }
+  button.linkish {
+    background: #fff; border: 1px solid var(--line); border-radius: 0.5rem;
+    min-height: 34px; padding: 0.25rem 0.7rem; cursor: pointer; font-weight: 700;
+  }
+  .alert { border-radius: 0.5rem; padding: 0.7rem 0.85rem; margin: 0.45rem 0 0.75rem; }
+  .alert.info { background: #e8f1fb; color: #0f3a5f; }
+  .alert.warn { background: #fff6e0; color: #6b4e00; }
+  .alert.err { background: #fde8e8; color: #8a1c13; }
+  .alert.ok { background: #e7f6ec; color: #146c36; }
+  hr { border: 0; border-top: 1px solid rgba(49, 51, 63, 0.15); margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; margin: 0.2rem 0 0.8rem; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+  th, td { text-align: left; padding: 0.48rem 0.4rem; border-bottom: 1px solid rgba(49, 51, 63, 0.12); vertical-align: middle; }
+  th { font-weight: 700; }
+  .caption { color: var(--muted); font-size: 0.8rem; margin: 0.3rem 0; }
+  .counts { color: var(--muted); font-size: 0.92rem; margin: 0.45rem 0 0.15rem; }
+  #saveStatus { min-height: 1.2rem; font-size: 0.85rem; margin: 0.1rem 0 0.45rem; }
+  .save-ok { color: #1b7f3a; }
+  .save-fail { color: #b42318; }
+  .segment-banner {
+    background: #d4eef6;
+    border-radius: 6px;
+    padding: 0.9rem 1.1rem;
+    margin: 0.45rem 0 0.85rem;
+    text-align: center;
+  }
+  .segment-banner .progress { font-size: 0.8rem; color: #000; margin-bottom: 0.45rem; text-align: center; }
+  .segment-banner .k {
+    font-size: 0.72rem; letter-spacing: 0.05em; text-transform: uppercase;
+    color: #000; font-weight: 700; margin-top: 0.35rem;
+  }
+  .sentence {
+    font-size: 1.05rem;
+    font-weight: 600;
+    line-height: 1.5;
+    text-align: center;
+    color: #000;
+    min-height: 3rem;
+  }
+  .segment-banner .line { margin: 0.12rem 0 0.2rem; }
+  .card {
+    border: 1px solid var(--line);
+    border-radius: 0.5rem;
+    padding: 0.75rem 0.85rem 0.65rem;
+    margin: 0.75rem 0;
+    background: #fff;
+    color: #000;
+  }
+  .card-top { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; margin-bottom: 0.55rem; }
+  .pills { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
+  .card-state { font-size: 0.82rem; font-weight: 700; color: #000; }
+  .card-actions { display: flex; gap: 0.35rem; align-items: center; }
+  .card-foot { display: flex; justify-content: flex-end; margin-top: 0.45rem; }
+  .card-foot button { width: auto; }
+  .card textarea.sentence { width: 100%; min-height: 90px; font-weight: 600; }
+  button.icon-btn {
+    width: 34px; height: 34px; min-height: 34px; padding: 0;
+    border-radius: 0.5rem; border: 1px solid var(--line); background: #fff;
+    cursor: pointer; font-size: 1rem; line-height: 1;
+  }
+  button.icon-btn.active { border-color: var(--primary); background: #e7f4f8; }
+  button.icon-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .status-validated { color: #000; font-weight: 700; }
+  .status-rejected { color: #000; font-weight: 700; }
+  .span-preview { padding: 0.35rem 0.4rem; }
+  .span-preview em { font-style: italic; color: var(--muted); font-weight: 700; }
+  .span-note { font-size: 0.75rem; color: #9a3412; margin: 0.1rem 0 0.3rem; }
+  .err-span {
+    text-decoration: underline;
+    text-decoration-color: #3697b3;
+    text-underline-offset: 3px;
+    text-decoration-thickness: 2px;
+  }
+  .err-span.strike {
+    text-decoration: line-through;
+    text-decoration-color: #3697b3;
+    text-decoration-thickness: 2px;
+  }
+  .err-span.approx { opacity: 0.85; }
+  .controls, .nav, .split { display: grid; gap: 0.5rem; }
+  .controls, .nav { grid-template-columns: 1fr 1fr 1fr; align-items: center; }
+  .split { grid-template-columns: 1fr 1fr; }
+  .nav { margin-top: 0.35rem; }
+  .nav button, .controls button.primary, .controls button.secondary { width: 100%; }
+  .suggest { margin-top: 0.9rem; }
+  .suggest-item { padding: 0.35rem 0; border-top: 1px solid rgba(49, 51, 63, 0.1); }
+  .footer {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 1rem 4.5rem;
+    color: var(--muted);
+    font-size: 0.82rem;
+  }
+  @media (max-width: 720px) {
+    .app-header { display: block; }
+    .userbox { margin-top: 0.75rem; }
+    .controls, .nav, .split { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<main class="wrap" id="app"></main>
+<button type="button" id="resetBtn" class="reset-dock">Reset Demo</button>
+<footer class="footer">Standalone demo for sharing (for example on Tiiny Host). It is separate from the Streamlit application and does not connect to Supabase.</footer>
+<noscript><p class="wrap">This demo needs JavaScript. It still does not connect to a server.</p></noscript>
+<script id="pilot-data" type="application/json">__PILOT_JSON__</script>
+<script>
+const DATA = JSON.parse(document.getElementById("pilot-data").textContent);
+__APP_JS__
+</script>
+</body>
+</html>

@@ -1,4 +1,11 @@
-from app.core.spans import compute_span, realign_span, render_highlighted_html
+from app.core.spans import (
+    compute_span,
+    parse_tags,
+    realign_span,
+    region_of,
+    render_highlighted_html,
+    with_tags,
+)
 
 
 def test_mistranslation_span():
@@ -47,3 +54,39 @@ def test_highlight_escapes_html():
     html = render_highlighted_html("<b>keep</b> me", 0, 8)
     assert "&lt;b&gt;" in html
     assert "<b>" not in html.replace("<span", "")
+
+
+def test_with_and_parse_tags():
+    text = "Sandra no fue al parque."
+    start = text.index("no")
+    end = start + 2
+    tagged = with_tags(text, start, end)
+    assert "<no>" in tagged
+    parsed, s, e = parse_tags(tagged)
+    assert parsed == text
+    assert parsed[s:e] == "no"
+
+
+def test_parse_tags_strips_unbalanced():
+    parsed, s, e = parse_tags("one <two three")
+    assert parsed == "one two three"
+    assert s is None and e is None
+
+
+def test_omission_region_strikes_inserted_span():
+    ref = "Sandra fue al parque ayer."
+    cand = "Sandra fue al parque."
+    region = region_of(
+        error_type="Omission",
+        generated_text=cand,
+        edited_text=cand,
+        reference_text=ref,
+        target_span_start=None,
+        target_span_end=None,
+        ref_span_start=ref.index("ayer"),
+        ref_span_end=ref.index("ayer") + 4,
+        target_insert_pos=len(cand) - 1,
+    )
+    assert region.strike is True
+    assert region.start is not None
+    assert "ayer" in region.text[region.start : region.end]

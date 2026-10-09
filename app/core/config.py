@@ -11,33 +11,44 @@ from dotenv import load_dotenv
 load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 
-def _secret(name: str, default: str = "") -> str:
+def _secret(*names: str, default: str = "") -> str:
     try:
         import streamlit as st
 
-        if name in st.secrets:
-            return str(st.secrets[name])
+        for name in names:
+            if name in st.secrets:
+                return str(st.secrets[name])
     except Exception:
         pass
-    return os.environ.get(name, default)
+    for name in names:
+        value = os.environ.get(name)
+        if value:
+            return value
+    return default
 
 
 @dataclass(frozen=True)
 class Settings:
     supabase_url: str
-    supabase_anon_key: str
-    supabase_service_role_key: str
+    supabase_publishable_key: str
+    supabase_secret_key: str
     database_url: str
 
     @property
     def configured(self) -> bool:
-        return bool(self.supabase_url and self.supabase_anon_key)
+        return bool(self.supabase_url and self.supabase_publishable_key)
 
 
 def get_settings() -> Settings:
     return Settings(
         supabase_url=_secret("SUPABASE_URL"),
-        supabase_anon_key=_secret("SUPABASE_ANON_KEY"),
-        supabase_service_role_key=_secret("SUPABASE_SERVICE_ROLE_KEY"),
+        supabase_publishable_key=_secret(
+            "SUPABASE_PUBLISHABLE_KEY",
+            "SUPABASE_ANON_KEY",
+        ),
+        supabase_secret_key=_secret(
+            "SUPABASE_SECRET_KEY",
+            "SUPABASE_SERVICE_ROLE_KEY",
+        ),
         database_url=_secret("DATABASE_URL"),
     )

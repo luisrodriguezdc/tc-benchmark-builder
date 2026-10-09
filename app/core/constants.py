@@ -12,6 +12,15 @@ REJECTION_REASONS = (
 
 REJECTION_REASON_LABELS = dict(REJECTION_REASONS)
 
+HOWTO_DEMO_INTRO = """
+### This demo
+
+You are looking at a clickable preview of the Translation Commons Benchmark Builder.
+There is no login. Validate, reject, edit, and suggest as you would in the live tool.
+Everything you change is stored in this session only. **Reset Demo** erases that local
+copy. The live database is unchanged.
+""".strip()
+
 HOWTO_GUIDE = """
 ### Annotation rules
 
@@ -36,11 +45,11 @@ You may edit the sentence and the labels before validating.
 
 ### Interface
 
-- The yellow panel is the **source** and **reference** (read-only; you can copy them).
-- Each card is a generated error. Red underlines are a visual aid only — you can still validate without a highlight.
-- **(+) Suggest an additional error** is optional and is stored separately from generated candidates.
-- **Back** / **Next** never discard saved work. You may skip incomplete cards and return later.
-- Work is saved to the server. Use **Save** if a network error appears.
+- The blue panel is the **source** and the **reference**. Both are read-only. Use **×** in that panel to flag that the source or reference already contains an error. Validation is then skipped; **Undo** clears the flag.
+- Each card shows the suggested error. Underlines and strikethroughs are a visual aid only. Use the pen to edit; angle brackets mark the error region and are not part of the sentence.
+- **Suggest an additional error** is optional and is stored separately from generated candidates. The suggested target must differ from the reference.
+- **Back** / **Next** keep saved work. You may skip incomplete cards and return later.
+- Edits autosave. Use **Save** on a card to leave edit mode.
 - A segment is **resolved** when every generated candidate is validated or rejected.
 
 ### Independence
@@ -48,6 +57,11 @@ You may edit the sentence and the labels before validating.
 Do not discuss items with other annotators until you have finished your own annotations.
 Overlap items exist so we can measure agreement later.
 """.strip()
+
+HOWTO_GUIDE_DEMO_SAVE = (
+    "Work is saved in this session only. Use **Save** to confirm a local save. "
+    "Nothing is sent to a server."
+)
 
 APP_TITLE = "Translation Commons Benchmark Builder"
 COOKIE_ACCESS = "tcb_access_token"

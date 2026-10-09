@@ -33,6 +33,7 @@ EXPORT_COLUMNS = [
     "updated_at",
     "source_text",
     "reference_text",
+    "source_error",
 ]
 
 
@@ -73,6 +74,10 @@ def fetch_export_rows(client, *, filters: dict[str, Any] | None = None) -> list[
     segment_ids = list({c["segment_id"] for c in candidates})
     segments = _in_query(client, "segments", "id", segment_ids)
     seg_by_id = {s["id"]: s for s in segments}
+    batch_items = _in_query(client, "batch_items", "batch_id", batch_ids)
+    source_error_by_key = {
+        (i.get("batch_id"), i.get("segment_id")): bool(i.get("source_error")) for i in batch_items
+    }
 
     dataset_ids = list({s["dataset_id"] for s in segments})
     datasets = _in_query(client, "datasets", "id", dataset_ids)
@@ -134,6 +139,7 @@ def fetch_export_rows(client, *, filters: dict[str, Any] | None = None) -> list[
                 "updated_at": a.get("updated_at"),
                 "source_text": seg.get("source_text"),
                 "reference_text": seg.get("reference_text"),
+                "source_error": source_error_by_key.get((a.get("batch_id"), cand.get("segment_id")), False),
             }
         )
     return out

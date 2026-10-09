@@ -1,0 +1,19 @@
+Tiiny Host upload
+
+Upload demo/tc-benchmark-builder-demo.zip.
+index.html is at the root of the zip, which is what Tiiny Host expects.
+
+You can also upload demo/index.html by itself.
+
+The page is a demo. Annotations stay in the browser. They are not written to the live database.
+No login, Supabase, or Python server is required.
+
+Open demo/index.html in a browser, or serve the demo folder:
+
+    python3 -m http.server 8765
+
+Then visit http://127.0.0.1:8765/
+
+To rebuild after the pilot CSV changes:
+
+    python3 demo/build_demo.py

@@ -132,7 +132,11 @@ def cookies_from_streamlit() -> dict[str, str]:
 
 def invite_user(email: str, display_name: str, role: str = "translator") -> dict[str, Any]:
     """Create an Auth user + profile. Invitation-only; no self-signup."""
+    from app.core.demo import demo_enabled, get_demo_store
+
     email = email.strip().lower()
+    if demo_enabled():
+        return get_demo_store().invite(email, display_name, role)
     admin = create_service_client()
     created = admin.auth.admin.create_user(
         {

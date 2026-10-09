@@ -69,6 +69,10 @@ def render_login() -> None:
 
 
 def healthcheck() -> str | None:
+    from app.core.demo import demo_enabled
+
+    if demo_enabled():
+        return None
     try:
         create_anon_client()
     except Exception as exc:
