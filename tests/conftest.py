@@ -181,6 +181,12 @@ def reset_data(conn) -> None:
             WHERE source_lang = 'en' AND target_lang = 'es-ES'
             """
         )
+        cur.execute(
+            """
+            DELETE FROM language_pairs
+            WHERE source_lang <> 'en' OR target_lang <> 'es-ES'
+            """
+        )
     if not conn.autocommit:
         conn.commit()
 
@@ -204,7 +210,7 @@ def db_autocommit(migrated_url):
     conn.close()
 
 
-def make_user(conn, email: str, role: str = "translator") -> str:
+def make_user(conn, email: str, role: str = "translator", *, assign_languages: bool = True) -> str:
     uid = str(uuid.uuid4())
     with conn.cursor() as cur:
         cur.execute(
@@ -218,6 +224,15 @@ def make_user(conn, email: str, role: str = "translator") -> str:
             """,
             (uid, email, email.split("@")[0], role),
         )
+        if assign_languages:
+            cur.execute(
+                """
+                INSERT INTO translator_languages (profile_id, language_pair_id)
+                SELECT %s, lp.id FROM language_pairs lp
+                ON CONFLICT DO NOTHING
+                """,
+                (uid,),
+            )
     if not conn.autocommit:
         conn.commit()
     return uid

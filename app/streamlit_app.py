@@ -12,9 +12,21 @@ from app.ui.admin.exports import render_exports
 from app.ui.admin.overview import render_overview
 from app.ui.admin.volunteers import render_volunteers
 from app.ui.auth import healthcheck, render_login
-from app.ui.components import render_account_menu
+from app.ui.components import render_account_menu, render_production_account
 from app.ui.dashboard import render_dashboard
+from app.ui.welcome import render_howto, render_welcome
 from app.ui.workspace import render_workspace
+from app.ui import styles
+
+VOLUNTEER_NAV = ("Welcome", "How To Guide", "Dashboard")
+ADMIN_NAV = ("Overview", "Datasets", "Volunteers", "Review & export")
+
+
+def production_nav_options(is_admin: bool) -> list[str]:
+    options = list(VOLUNTEER_NAV)
+    if is_admin:
+        options.extend(ADMIN_NAV)
+    return options
 
 
 def _restore_from_cookies() -> None:
@@ -77,11 +89,17 @@ def _run_app() -> None:
     if profile is None or client is None:
         render_login()
         return
+    if demo_enabled():
+        _run_demo(client, profile)
+        return
+    _run_production(client, profile)
 
+
+def _run_demo(client, profile) -> None:
     page = st.session_state.get("page") or "dashboard"
 
     render_account_menu(profile)
-    if demo_enabled() and st.sidebar.button("Reset Demo", key="reset_demo"):
+    if st.sidebar.button("Reset Demo", key="reset_demo"):
         _reset_demo()
         st.rerun()
 
@@ -105,4 +123,34 @@ def _run_app() -> None:
     if page == "workspace":
         render_workspace(client, profile)
     else:
+        render_dashboard(client, profile)
+
+
+def _run_production(client, profile) -> None:
+    styles.inject()
+    options = production_nav_options(profile.is_admin)
+    if st.session_state.get("prod_nav") not in options:
+        st.session_state.prod_nav = "Dashboard"
+    choice = st.sidebar.radio("Navigate", options, key="prod_nav", label_visibility="collapsed")
+    render_production_account(profile)
+
+    if choice != "Dashboard":
+        st.session_state.page = "dashboard"
+
+    if choice == "Welcome":
+        render_welcome(profile)
+    elif choice == "How To Guide":
+        render_howto()
+    elif choice == "Overview":
+        render_overview(client)
+    elif choice == "Datasets":
+        render_datasets(client)
+    elif choice == "Volunteers":
+        render_volunteers(client)
+    elif choice == "Review & export":
+        render_exports(client)
+    elif st.session_state.get("page") == "workspace":
+        render_workspace(client, profile)
+    else:
+        st.session_state.page = "dashboard"
         render_dashboard(client, profile)

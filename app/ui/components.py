@@ -41,8 +41,22 @@ def render_header() -> None:
         f'<div class="tcb-brand"><span class="tcb-title">{APP_TITLE}</span>{badge}</div>',
         unsafe_allow_html=True,
     )
-    with st.expander("How To Guide", expanded=False):
-        st.markdown(_howto_markdown())
+    # The public demo keeps the guide in the page. Production opens it from the sidebar.
+    if demo_enabled():
+        with st.expander("How To Guide", expanded=False):
+            st.markdown(_howto_markdown())
+
+
+def render_production_account(profile: Profile) -> None:
+    """Signed-in name pinned to the bottom of the production sidebar."""
+    import html
+
+    name = html.escape(profile.display_name or profile.email)
+    with st.sidebar:
+        st.markdown('<div class="tcb-sidebar-push"></div>', unsafe_allow_html=True)
+        if st.button("Log out", key="logout"):
+            _logout()
+        st.markdown(f'<div class="tcb-sidebar-name">{name}</div>', unsafe_allow_html=True)
 
 
 def render_segment_banner(

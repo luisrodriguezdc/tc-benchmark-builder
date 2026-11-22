@@ -4,7 +4,15 @@ from __future__ import annotations
 
 import streamlit as st
 
+from app.core.allocation import pair_label
 from app.core.auth import invite_user
+
+
+def _pair_option(pair: dict) -> str:
+    label = f"{pair_label(pair)} ({pair['source_lang']}→{pair['target_lang']})"
+    if not pair.get("is_active", True):
+        label += " (inactive)"
+    return label
 
 
 def render_volunteers(client) -> None:
@@ -19,6 +27,17 @@ def render_volunteers(client) -> None:
     )
     batches = client.table("batches").select("id,owner_id,status,batch_number,language_pair_id").execute().data or []
     anns = client.table("annotations").select("annotator_id,status").execute().data or []
+    pairs = client.table("language_pairs").select("*").order("source_lang").execute().data or []
+    assignments = (
+        client.table("translator_languages").select("profile_id,language_pair_id").execute().data or []
+    )
+    pair_by_id = {p["id"]: p for p in pairs}
+    languages_for: dict[str, list[str]] = {}
+    for row in assignments:
+        pair = pair_by_id.get(row["language_pair_id"])
+        if pair is None:
+            continue
+        languages_for.setdefault(row["profile_id"], []).append(pair_label(pair))
 
     st.dataframe(
         [
@@ -27,6 +46,7 @@ def render_volunteers(client) -> None:
                 "email": p["email"],
                 "role": p["role"],
                 "active": p["is_active"],
+                "languages": ", ".join(sorted(languages_for.get(p["id"], []))) or "—",
                 "batches": sum(1 for b in batches if b["owner_id"] == p["id"]),
                 "annotations": sum(1 for a in anns if a["annotator_id"] == p["id"]),
             }
@@ -77,6 +97,40 @@ def render_volunteers(client) -> None:
             st.rerun()
         except Exception as exc:
             st.error(str(exc))
+
+    st.markdown("##### Languages")
+    st.caption("A volunteer may have several language pairs. Only these pairs can be claimed.")
+    if not pairs:
+        st.caption("No language pairs yet. Add one under Datasets.")
+    else:
+        options = [_pair_option(p) for p in pairs]
+        option_ids = {_pair_option(p): p["id"] for p in pairs}
+        current_ids = {
+            row["language_pair_id"]
+            for row in assignments
+            if row["profile_id"] == user["id"]
+        }
+        widget_key = f"lang_assign_{user['id']}"
+        if widget_key not in st.session_state:
+            st.session_state[widget_key] = [label for label in options if option_ids[label] in current_ids]
+        picked = st.multiselect("Language pairs", options, key=widget_key)
+        if st.session_state.pop("languages_saved_for", None) == user["id"]:
+            st.success("Languages saved.")
+        if st.button("Save languages", key="save_languages"):
+            try:
+                client.table("translator_languages").delete().eq("profile_id", user["id"]).execute()
+                if picked:
+                    client.table("translator_languages").insert(
+                        [
+                            {"profile_id": user["id"], "language_pair_id": option_ids[label]}
+                            for label in picked
+                        ]
+                    ).execute()
+            except Exception as exc:
+                st.error(str(exc))
+            else:
+                st.session_state.languages_saved_for = user["id"]
+                st.rerun()
 
     st.markdown("##### Batches for this user")
     mine = [b for b in batches if b["owner_id"] == user["id"]]

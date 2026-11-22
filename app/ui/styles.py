@@ -127,6 +127,40 @@ div[data-testid="stSelectbox"] [data-baseweb="select"] input {
   justify-content: center !important;
   text-align: center !important;
 }
+[data-testid="stSidebar"]:has(.tcb-sidebar-push) [data-testid="stSidebarUserContent"] {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: calc(100vh - 2.5rem);
+}
+[data-testid="stSidebar"]:has(.tcb-sidebar-push) [data-testid="stSidebarUserContent"] > div {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 100%;
+}
+[data-testid="stSidebar"]:has(.tcb-sidebar-push) [data-testid="stVerticalBlock"] {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 100%;
+}
+[data-testid="stSidebar"]:has(.tcb-sidebar-push) [data-testid="stElementContainer"]:has(.tcb-sidebar-push) {
+  margin-top: auto !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  margin-bottom: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+.tcb-sidebar-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #1f2328;
+  line-height: 1.35;
+  padding: 0.75rem 0.15rem 0.35rem;
+  border-top: 1px solid rgba(49, 51, 63, 0.16);
+}
 </style>
 """
 
