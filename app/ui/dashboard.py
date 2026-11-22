@@ -8,6 +8,7 @@ from app.core.allocation import (
     batch_segment_progress,
     claim_batch,
     claimable_for_pair,
+    list_assigned_pair_ids,
     list_batches,
     list_language_pairs,
     list_public_profiles,
@@ -48,6 +49,8 @@ def render_dashboard(client, profile: Profile) -> None:
     render_header()
 
     st.markdown('<div class="tcb-title">Batches</div>', unsafe_allow_html=True)
+    if not demo_enabled():
+        st.caption("Every language is listed. Claim This Batch is shown for languages assigned to you.")
     if st.session_state.get("claim_error"):
         st.markdown(
             f'<div class="tcb-alert warn" role="alert">{st.session_state.claim_error}</div>',
@@ -61,7 +64,10 @@ def render_dashboard(client, profile: Profile) -> None:
     with mine_tab:
         mine = [r for r in rows if r.get("_mine")]
         if not mine:
-            st.caption("You have no batches yet. Claim one from All Batches.")
+            if any(row.get("action") == "claim" for row in rows):
+                st.caption("You have no batches yet. Claim one from All Batches.")
+            else:
+                st.caption("You have no batches yet.")
         else:
             _render_table(client, mine, key_prefix="mine")
 
@@ -87,6 +93,8 @@ def _catalog_rows(client, profile: Profile) -> list[dict]:
         )
 
     has_active = any(b.get("owner_id") == profile.id and b.get("status") == "active" for b in batches)
+    # Demo keeps every sample claim button. Production shows Claim only for assigned pairs.
+    assigned = None if demo_enabled() else list_assigned_pair_ids(client, profile.id)
 
     for b in batches:
         lp = b.get("language_pairs") or {}
@@ -135,6 +143,7 @@ def _catalog_rows(client, profile: Profile) -> list[dict]:
         )
         if demo_enabled() and pair.get("target_lang") in {"es-ES", "es"}:
             next_num = max(next_num, 2)
+        can_claim = assigned is None or str(pair["id"]) in assigned
         rows.append(
             {
                 "pair": pair_label(pair),
@@ -143,7 +152,7 @@ def _catalog_rows(client, profile: Profile) -> list[dict]:
                 "status": "Not started",
                 "owner": "—",
                 "progress": f"0 / {size}",
-                "action": "claim",
+                "action": "claim" if can_claim else "none",
                 "_pair_id": pair["id"],
                 "_mine": False,
             }

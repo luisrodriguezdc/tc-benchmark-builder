@@ -163,3 +163,113 @@ def test_concurrent_claims_no_double_fresh_assignment(migrated_url):
         assert len(both) <= 2  # IAA budget ceil(10*0.15)=2
     finally:
         conn.close()
+
+
+def _assign(conn, uid: str, pair_id: str) -> None:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO translator_languages (profile_id, language_pair_id)
+            VALUES (%s, %s)
+            ON CONFLICT DO NOTHING
+            """,
+            (uid, pair_id),
+        )
+
+
+def _insert_pair(conn, source: str, target: str, source_label: str, target_label: str) -> str:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO language_pairs (
+              source_lang, target_lang, source_label, target_label,
+              iaa_target_pct, batch_size, is_active
+            ) VALUES (%s, %s, %s, %s, 15, 4, true)
+            RETURNING id
+            """,
+            (source, target, source_label, target_label),
+        )
+        return str(cur.fetchone()[0])
+
+
+def test_claim_requires_assigned_language(db_autocommit):
+    conn = db_autocommit
+    pair = fetch_pair_id(conn)
+    set_pair_settings(conn, pair, batch_size=4, iaa_pct=15)
+    seed_published_segments(conn, pair, n=8)
+
+    blocked = make_user(conn, "unassigned@example.com", assign_languages=False)
+    admin = make_user(conn, "assign-admin@example.com", role="admin", assign_languages=False)
+    with as_user(conn, blocked):
+        with pytest.raises(Exception, match="not assigned this language pair"):
+            _claim(conn, pair)
+        with conn.cursor() as cur:
+            with pytest.raises(Exception):
+                cur.execute(
+                    """
+                    INSERT INTO translator_languages (profile_id, language_pair_id)
+                    VALUES (%s, %s)
+                    """,
+                    (blocked, pair),
+                )
+    with as_user(conn, admin):
+        with pytest.raises(Exception, match="not assigned this language pair"):
+            _claim(conn, pair)
+        _assign(conn, blocked, pair)
+
+    owner = make_user(conn, "owner@example.com")
+    with as_user(conn, owner):
+        batch_id = _claim(conn, pair)
+        _complete_batch(conn, owner, batch_id)
+
+    with as_user(conn, blocked):
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT status FROM batches WHERE id = %s",
+                (batch_id,),
+            )
+            assert cur.fetchone()[0] == "completed"
+            cur.execute("SELECT language_pair_id::text FROM translator_languages")
+            assert {row[0] for row in cur.fetchall()} == {pair}
+            cur.execute("SELECT count(*) FROM segments")
+            assert cur.fetchone()[0] == 0
+            cur.execute("SELECT count(*) FROM annotations")
+            assert cur.fetchone()[0] == 0
+        claimed = _claim(conn, pair)
+    assert claimed
+    with as_user(conn, owner):
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT count(*) FROM translator_languages WHERE profile_id = %s",
+                (blocked,),
+            )
+            assert cur.fetchone()[0] == 0
+
+
+def test_several_languages_still_one_active_batch(db_autocommit):
+    conn = db_autocommit
+    spanish = fetch_pair_id(conn)
+    set_pair_settings(conn, spanish, batch_size=4, iaa_pct=15)
+    seed_published_segments(conn, spanish, n=8)
+    french = _insert_pair(conn, "en", "fr-FR", "English", "French")
+    seed_published_segments(conn, french, n=8)
+
+    both = make_user(conn, "both@example.com", assign_languages=False)
+    spanish_only = make_user(conn, "es-only@example.com", assign_languages=False)
+    _assign(conn, both, spanish)
+    _assign(conn, both, french)
+    _assign(conn, spanish_only, spanish)
+
+    with as_user(conn, both):
+        first = _claim(conn, spanish)
+        with pytest.raises(Exception, match="already have an active batch"):
+            _claim(conn, french)
+        _complete_batch(conn, both, first)
+        second = _claim(conn, french)
+    assert first != second
+
+    with as_user(conn, spanish_only):
+        with pytest.raises(Exception, match="not assigned this language pair"):
+            _claim(conn, french)
+        spanish_batch = _claim(conn, spanish)
+    assert spanish_batch

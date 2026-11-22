@@ -13,6 +13,16 @@ def pair_label(pair: dict) -> str:
     return f"{src} → {tgt}"
 
 
+def list_assigned_pair_ids(client: Client, profile_id: str) -> set[str]:
+    res = (
+        client.table("translator_languages")
+        .select("language_pair_id")
+        .eq("profile_id", profile_id)
+        .execute()
+    )
+    return {str(row["language_pair_id"]) for row in (res.data or []) if row.get("language_pair_id")}
+
+
 def list_language_pairs(client: Client, *, active_only: bool = True) -> list[dict]:
     q = client.table("language_pairs").select("*")
     if active_only:

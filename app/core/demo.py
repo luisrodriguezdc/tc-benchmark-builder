@@ -66,6 +66,7 @@ class _Query:
         self._limit: int | None = None
         self._insert: Any = None
         self._update: dict | None = None
+        self._delete = False
 
     def select(self, columns: str):
         self._select = columns
@@ -103,7 +104,31 @@ class _Query:
             return _Result([copy.deepcopy(existing[0])])
         return self.insert(row).execute()
 
+    def delete(self):
+        self._delete = True
+        return self
+
+    def _matches(self, row: dict) -> bool:
+        for key, value in self._filters:
+            if row.get(key) != value:
+                return False
+        for key, values in self._in_filters:
+            if row.get(key) not in set(values):
+                return False
+        return True
+
     def execute(self) -> _Result:
+        if self._delete:
+            table_rows = self.store.tables.setdefault(self.table, [])
+            kept = []
+            removed = []
+            for row in table_rows:
+                if self._matches(row):
+                    removed.append(copy.deepcopy(row))
+                else:
+                    kept.append(row)
+            self.store.tables[self.table] = kept
+            return _Result(removed)
         if self._insert is not None:
             rows = self._insert if isinstance(self._insert, list) else [self._insert]
             out = []
@@ -196,6 +221,7 @@ class DemoStore:
             "annotation_history": [],
             "error_suggestions": [],
             "admin_audit_log": [],
+            "translator_languages": [],
         }
 
     def project(self, table: str, row: dict, select: str) -> dict:
@@ -527,6 +553,9 @@ def seed_store() -> DemoStore:
                 "updated_at": _now(),
             },
         ]
+    )
+    store.tables["translator_languages"].append(
+        {"profile_id": DEMO_USER_ID, "language_pair_id": pair_id}
     )
     store.tables["language_pairs"].append(
         {

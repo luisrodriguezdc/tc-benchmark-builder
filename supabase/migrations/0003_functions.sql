@@ -247,6 +247,17 @@ BEGIN
     RAISE EXCEPTION 'You already have an active batch';
   END IF;
 
+  -- Language assignment is enforced only here. Batch rows stay visible to
+  -- every active user; this blocks claiming a pair the caller was not given.
+  IF NOT EXISTS (
+    SELECT 1
+    FROM translator_languages
+    WHERE profile_id = v_uid
+      AND language_pair_id = p_language_pair_id
+  ) THEN
+    RAISE EXCEPTION 'You are not assigned this language pair';
+  END IF;
+
   SELECT lp.batch_size, lp.iaa_target_pct
     INTO v_batch_size, v_iaa_pct
   FROM language_pairs lp
