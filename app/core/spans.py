@@ -131,6 +131,13 @@ class Region:
     approximate: bool = False
 
 
+def sentence_error_type(candidate_type: str, dropdown_type: str, *, text_was_saved: bool = False) -> str:
+    """Dropdowns store a label. The sentence keeps its type until a text save."""
+    if text_was_saved:
+        return dropdown_type or candidate_type
+    return candidate_type
+
+
 def region_of(
     *,
     error_type: str,
@@ -148,7 +155,12 @@ def region_of(
     span_end: int | None = None,
     has_custom_omission: bool = False,
 ) -> Region:
-    """Visual region for a candidate: underline, or strikethrough for omissions."""
+    """Highlight the saved sentence.
+
+    For an omission, strike the omitted words inside that sentence. Callers
+    pass the sentence's own type, not the live dropdown label, so changing
+    the label does not rebuild the sentence.
+    """
     if error_type == "Omission":
         base = edited_text
         if has_custom_omission:

@@ -18,7 +18,7 @@ from app.core.annotations import (
 from app.core.auth import Profile
 from app.core.constants import ERROR_TYPES, REJECTION_REASONS, SEVERITIES
 from app.core.demo import demo_enabled
-from app.core.spans import compute_span, parse_tags, region_of, with_tags
+from app.core.spans import compute_span, parse_tags, region_of, sentence_error_type, with_tags
 from app.ui.components import (
     render_header,
     render_save_status,
@@ -44,6 +44,8 @@ def _ensure_card_state(cand: dict, ann: dict | None) -> None:
     st.session_state.setdefault(f"omitted_{cid}", None)
     st.session_state.setdefault(f"insert_at_{cid}", cand.get("target_insert_pos"))
     st.session_state.setdefault(f"omission_custom_{cid}", False)
+    # The sentence keeps the candidate's type. The dropdown label is separate.
+    st.session_state.setdefault(f"sentence_type_{cid}", cand["error_type"])
 
 
 def _apply_editor(cand: dict, raw: str) -> None:
@@ -76,8 +78,16 @@ def _flush_editor(cand: dict) -> None:
     if not st.session_state.get(f"editing_{cid}"):
         return
     raw = st.session_state.get(f"edit_raw_{cid}")
-    if isinstance(raw, str):
+    opened = st.session_state.get(f"edit_opened_{cid}")
+    # A label change must not rewrite the sentence. Apply the editor only
+    # after the linguist has changed the text and hits Save.
+    if isinstance(raw, str) and raw != opened:
         _apply_editor(cand, raw)
+        st.session_state[f"sentence_type_{cid}"] = sentence_error_type(
+            cand["error_type"],
+            st.session_state.get(f"type_{cid}") or cand["error_type"],
+            text_was_saved=True,
+        )
     st.session_state[f"editing_{cid}"] = False
 
 
@@ -252,7 +262,7 @@ def _flush_segment(client, batch_id: str, current: dict) -> None:
 def _region_kwargs(cand: dict, segment: dict) -> dict:
     cid = cand["id"]
     return dict(
-        error_type=st.session_state.get(f"type_{cid}") or cand["error_type"],
+        error_type=st.session_state.get(f"sentence_type_{cid}") or cand["error_type"],
         generated_text=cand["generated_text"],
         edited_text=st.session_state.get(f"text_{cid}") or cand["generated_text"],
         reference_text=segment.get("reference_text") or "",
@@ -306,7 +316,9 @@ def _render_card(
                     st.rerun()
             elif st.button("Edit", key=f"edit_{cid}", disabled=locked, width="stretch"):
                 region = region_of(**_region_kwargs(cand, segment))
-                st.session_state[f"edit_raw_{cid}"] = with_tags(region.text, region.start, region.end)
+                opened = with_tags(region.text, region.start, region.end)
+                st.session_state[f"edit_raw_{cid}"] = opened
+                st.session_state[f"edit_opened_{cid}"] = opened
                 st.session_state[f"editing_{cid}"] = True
                 st.rerun()
         with top[4]:

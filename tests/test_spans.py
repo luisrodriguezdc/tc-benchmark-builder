@@ -4,6 +4,7 @@ from app.core.spans import (
     realign_span,
     region_of,
     render_highlighted_html,
+    sentence_error_type,
     with_tags,
 )
 
@@ -73,11 +74,10 @@ def test_parse_tags_strips_unbalanced():
     assert s is None and e is None
 
 
-def test_omission_region_strikes_inserted_span():
+def test_omission_strikes_words_inside_the_same_sentence():
     ref = "Sandra fue al parque ayer."
     cand = "Sandra fue al parque."
-    region = region_of(
-        error_type="Omission",
+    shared = dict(
         generated_text=cand,
         edited_text=cand,
         reference_text=ref,
@@ -87,6 +87,10 @@ def test_omission_region_strikes_inserted_span():
         ref_span_end=ref.index("ayer") + 4,
         target_insert_pos=len(cand) - 1,
     )
-    assert region.strike is True
-    assert region.start is not None
-    assert "ayer" in region.text[region.start : region.end]
+    shown = region_of(error_type=sentence_error_type("Omission", "Addition"), **shared)
+    assert sentence_error_type("Omission", "Addition") == "Omission"
+    assert shown.strike is True
+    assert shown.text.startswith("Sandra fue al parque")
+    assert shown.start is not None
+    assert shown.text[shown.start : shown.end] == "ayer"
+    assert sentence_error_type("Omission", "Addition", text_was_saved=True) == "Addition"
