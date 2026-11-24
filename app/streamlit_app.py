@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from app.core.auth import cookies_from_streamlit, fetch_profile, restore_session
+from app.core.auth import cookie_set_js, cookies_from_streamlit, fetch_profile, persisted_tokens, restore_session
 from app.core.constants import APP_TITLE, COOKIE_ACCESS, COOKIE_REFRESH
 from app.core.demo import demo_enabled, demo_profile, get_demo_client, reset_demo_store
 from app.ui.admin.datasets import render_datasets
@@ -12,14 +12,14 @@ from app.ui.admin.exports import render_exports
 from app.ui.admin.overview import render_overview
 from app.ui.admin.volunteers import render_volunteers
 from app.ui.auth import healthcheck, render_login
-from app.ui.components import render_account_menu, render_production_account
+from app.ui.components import render_account_menu, render_sidebar_nav
 from app.ui.dashboard import render_dashboard
 from app.ui.welcome import render_howto, render_welcome
 from app.ui.workspace import render_workspace
 from app.ui import styles
 
-VOLUNTEER_NAV = ("Welcome", "How To Guide", "Dashboard")
-ADMIN_NAV = ("Overview", "Datasets", "Volunteers", "Review & export")
+VOLUNTEER_NAV = ("Welcome", "Annotation Guide", "Workspace", "Dashboard")
+ADMIN_NAV = ("Datasets", "Volunteers", "Review & export")
 
 
 def production_nav_options(is_admin: bool) -> list[str]:
@@ -30,6 +30,8 @@ def production_nav_options(is_admin: bool) -> list[str]:
 
 
 def _restore_from_cookies() -> None:
+    if st.session_state.get("clear_auth_cookies"):
+        return
     if st.session_state.get("client") is not None:
         return
     cookies = cookies_from_streamlit()
@@ -41,9 +43,12 @@ def _restore_from_cookies() -> None:
         client = restore_session(access, refresh)
         profile = fetch_profile(client)
     except Exception:
+        st.session_state.clear_auth_cookies = True
         return
     if profile is None or not profile.is_active:
+        st.session_state.clear_auth_cookies = True
         return
+    access, refresh = persisted_tokens(client, access, refresh)
     st.session_state.client = client
     st.session_state.profile = profile
     st.session_state.access_token = access
@@ -96,52 +101,40 @@ def _run_app() -> None:
 
 
 def _run_demo(client, profile) -> None:
-    page = st.session_state.get("page") or "dashboard"
-
-    render_account_menu(profile)
+    styles.inject()
+    _route(client, profile)
     if st.sidebar.button("Reset Demo", key="reset_demo"):
         _reset_demo()
         st.rerun()
-
-    if profile.is_admin:
-        mode = st.sidebar.radio("Mode", ["Translator", "Admin"], index=0 if page != "admin" else 1)
-    else:
-        mode = "Translator"
-
-    if mode == "Admin":
-        section = st.sidebar.radio("Admin", ["Overview", "Datasets", "Volunteers", "Review & export"])
-        if section == "Overview":
-            render_overview(client)
-        elif section == "Datasets":
-            render_datasets(client)
-        elif section == "Volunteers":
-            render_volunteers(client)
-        else:
-            render_exports(client)
-        return
-
-    if page == "workspace":
-        render_workspace(client, profile)
-    else:
-        render_dashboard(client, profile)
+    render_account_menu(profile)
 
 
 def _run_production(client, profile) -> None:
     styles.inject()
-    options = production_nav_options(profile.is_admin)
-    if st.session_state.get("prod_nav") not in options:
-        st.session_state.prod_nav = "Dashboard"
-    choice = st.sidebar.radio("Navigate", options, key="prod_nav", label_visibility="collapsed")
-    render_production_account(profile)
+    access = st.session_state.get("access_token") or ""
+    refresh = st.session_state.get("refresh_token") or ""
+    if access and refresh:
+        access, refresh = persisted_tokens(client, access, refresh)
+        st.session_state.access_token = access
+        st.session_state.refresh_token = refresh
+        st.html(cookie_set_js(access, refresh), unsafe_allow_javascript=True)
+    _route(client, profile)
+    render_account_menu(profile)
 
-    if choice != "Dashboard":
+
+def _route(client, profile) -> None:
+    options = production_nav_options(profile.is_admin)
+    choice = render_sidebar_nav(options)
+
+    # Leaving the batch list closes an open annotation screen.
+    if choice != "Workspace":
         st.session_state.page = "dashboard"
 
     if choice == "Welcome":
         render_welcome(profile)
-    elif choice == "How To Guide":
+    elif choice == "Annotation Guide":
         render_howto()
-    elif choice == "Overview":
+    elif choice == "Dashboard":
         render_overview(client)
     elif choice == "Datasets":
         render_datasets(client)
@@ -149,7 +142,7 @@ def _run_production(client, profile) -> None:
         render_volunteers(client)
     elif choice == "Review & export":
         render_exports(client)
-    elif st.session_state.get("page") == "workspace":
+    elif st.session_state.get("page") == "workspace" and not profile.is_project_manager:
         render_workspace(client, profile)
     else:
         st.session_state.page = "dashboard"

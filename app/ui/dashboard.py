@@ -6,6 +6,8 @@ import streamlit as st
 
 from app.core.allocation import (
     batch_segment_progress,
+    batch_slot_sizes,
+    next_open_batch_number,
     claim_batch,
     claimable_for_pair,
     list_assigned_pair_ids,
@@ -13,10 +15,11 @@ from app.core.allocation import (
     list_language_pairs,
     list_public_profiles,
     pair_label,
+    published_segment_counts,
 )
 from app.core.auth import Profile
 from app.core.demo import demo_enabled
-from app.ui.components import render_header
+from app.ui.components import render_header, render_page_title
 from app.ui import styles
 
 DUMMY_BATCHES = [
@@ -48,16 +51,20 @@ def render_dashboard(client, profile: Profile) -> None:
     styles.inject()
     render_header()
 
-    st.markdown('<div class="tcb-title">Batches</div>', unsafe_allow_html=True)
+    render_page_title("Workspace")
     if not demo_enabled():
-        st.caption("Every language is listed. Claim This Batch is shown for languages assigned to you.")
+        st.caption("You are only able to claim 1 batch at a time for the languages assigned to you.")
     if st.session_state.get("claim_error"):
         st.markdown(
             f'<div class="tcb-alert warn" role="alert">{st.session_state.claim_error}</div>',
             unsafe_allow_html=True,
         )
 
-    rows = _catalog_rows(client, profile)
+    try:
+        rows = _catalog_rows(client, profile)
+    except Exception:
+        st.warning("The batch list could not be loaded. Refresh the page and try again.")
+        rows = []
     all_tab, mine_tab = st.tabs(["All Batches", "My Batches"])
     with all_tab:
         _render_table(client, rows, key_prefix="all")
@@ -73,28 +80,28 @@ def render_dashboard(client, profile: Profile) -> None:
 
 
 def _catalog_rows(client, profile: Profile) -> list[dict]:
+    if demo_enabled():
+        return _demo_catalog_rows(client, profile)
+    return _production_catalog_rows(client, profile)
+
+
+def _demo_catalog_rows(client, profile: Profile) -> list[dict]:
     profiles = list_public_profiles(client)
     batches = list_batches(client)
     pairs = list_language_pairs(client)
-    rows: list[dict] = []
-
-    if demo_enabled():
-        rows.append(
-            {
-                "pair": "English → Spanish",
-                "batch": "1",
-                "size": "50",
-                "status": "WIP",
-                "owner": "Elena Vargas",
-                "progress": "18 / 50",
-                "action": "none",
-                "_mine": False,
-            }
-        )
-
+    rows: list[dict] = [
+        {
+            "pair": "English → Spanish",
+            "batch": "1",
+            "size": "50",
+            "status": "WIP",
+            "owner": "Elena Vargas",
+            "progress": "18 / 50",
+            "action": "none",
+            "_mine": False,
+        }
+    ]
     has_active = any(b.get("owner_id") == profile.id and b.get("status") == "active" for b in batches)
-    # Demo keeps every sample claim button. Production shows Claim only for assigned pairs.
-    assigned = None if demo_enabled() else list_assigned_pair_ids(client, profile.id)
 
     for b in batches:
         lp = b.get("language_pairs") or {}
@@ -103,22 +110,21 @@ def _catalog_rows(client, profile: Profile) -> list[dict]:
             resolved, total = batch_segment_progress(client, b["id"], b["owner_id"])
         except Exception:
             resolved, total = 0, 0
-        status = _status_label(b["status"])
-        if b["owner_id"] == profile.id and b["status"] == "active":
-            action = "resume"
-        elif b["owner_id"] == profile.id:
-            action = "view"
-        else:
-            action = "none"
         batch_no = int(b.get("batch_number") or 0)
-        if demo_enabled() and (lp.get("target_lang") in {"es-ES", "es"}):
+        if lp.get("target_lang") in {"es-ES", "es"}:
             batch_no += 1
+        if profile.is_project_manager or b["owner_id"] != profile.id:
+            action = "none"
+        elif b["status"] == "active":
+            action = "resume"
+        else:
+            action = "view"
         rows.append(
             {
                 "pair": pair_label(lp) if lp else "",
                 "batch": str(batch_no),
                 "size": str(total),
-                "status": status,
+                "status": _status_label(b["status"]),
                 "owner": owner.get("display_name") or "—",
                 "progress": f"{resolved} / {total}",
                 "action": action,
@@ -135,15 +141,13 @@ def _catalog_rows(client, profile: Profile) -> list[dict]:
             remaining = 0
         if remaining <= 0 or has_active:
             continue
-        size = int(pair.get("batch_size") or remaining)
-        size = min(size, remaining)
+        size = min(int(pair.get("batch_size") or remaining), remaining)
         next_num = 1 + max(
             (int(b.get("batch_number") or 0) for b in batches if b.get("language_pair_id") == pair["id"]),
             default=0,
         )
-        if demo_enabled() and pair.get("target_lang") in {"es-ES", "es"}:
+        if pair.get("target_lang") in {"es-ES", "es"}:
             next_num = max(next_num, 2)
-        can_claim = assigned is None or str(pair["id"]) in assigned
         rows.append(
             {
                 "pair": pair_label(pair),
@@ -152,23 +156,128 @@ def _catalog_rows(client, profile: Profile) -> list[dict]:
                 "status": "Not started",
                 "owner": "—",
                 "progress": f"0 / {size}",
-                "action": "claim" if can_claim else "none",
+                "action": "none" if profile.is_project_manager else "claim",
                 "_pair_id": pair["id"],
                 "_mine": False,
             }
         )
 
-    if demo_enabled():
-        for dummy in DUMMY_BATCHES:
-            rows.append(
-                {
-                    **dummy,
-                    "action": "claim-dummy" if dummy["claimable"] else "none",
-                    "_mine": False,
-                }
-            )
-
+    for dummy in DUMMY_BATCHES:
+        rows.append(
+            {
+                **dummy,
+                "action": "claim-dummy" if dummy["claimable"] and not profile.is_project_manager else "none",
+                "_mine": False,
+            }
+        )
     return rows
+
+
+def _production_catalog_rows(client, profile: Profile) -> list[dict]:
+    """Every published batch slot, plus batches that already exist.
+
+    Future slots are not written to the database. Claim is offered on the
+    lowest free batch number of an assigned language, and only when this user
+    has no unfinished batch. A later claimed batch does not hide that gap.
+    Other people's annotation counts are not loaded.
+    """
+    profiles = list_public_profiles(client)
+    batches = list_batches(client)
+    pairs = list_language_pairs(client)
+    assigned = list_assigned_pair_ids(client, profile.id)
+    counts = published_segment_counts(client)
+    has_unfinished = any(
+        b.get("owner_id") == profile.id and b.get("status") == "active" for b in batches
+    )
+    rows: list[dict] = []
+
+    for pair in pairs:
+        published = counts.get(str(pair["id"]), 0)
+        sizes = batch_slot_sizes(published, int(pair.get("batch_size") or 0))
+        if not sizes:
+            continue
+        pair_batches = [b for b in batches if b.get("language_pair_id") == pair["id"]]
+        by_number = {int(b.get("batch_number") or 0): b for b in pair_batches}
+        next_number = next_open_batch_number(by_number)
+        numbers = set(range(1, len(sizes) + 1)) | set(by_number)
+        label = pair_label(pair)
+        for number in sorted(n for n in numbers if n > 0):
+            existing = by_number.get(number)
+            if existing is None:
+                size = sizes[number - 1] if number <= len(sizes) else 0
+                can_claim = (
+                    not profile.is_project_manager
+                    and str(pair["id"]) in assigned
+                    and not has_unfinished
+                    and number == next_number
+                )
+                rows.append(
+                    {
+                        "pair": label,
+                        "batch": str(number),
+                        "size": str(size),
+                        "status": "Not started",
+                        "owner": "—",
+                        "progress": f"0 / {size}",
+                        "action": "claim" if can_claim else "none",
+                        "_pair_id": pair["id"],
+                        "_mine": False,
+                    }
+                )
+                continue
+            rows.append(
+                _existing_batch_row(
+                    client,
+                    existing,
+                    profile,
+                    profiles,
+                    label,
+                    planned_size=sizes[number - 1] if number <= len(sizes) else None,
+                )
+            )
+    return rows
+
+
+def _existing_batch_row(
+    client,
+    batch: dict,
+    profile: Profile,
+    profiles: dict,
+    label: str,
+    *,
+    planned_size: int | None,
+) -> dict:
+    mine = batch.get("owner_id") == profile.id
+    owner_name = (profiles.get(batch.get("owner_id")) or {}).get("display_name") or "—"
+    number = str(int(batch.get("batch_number") or 0))
+    status = _status_label(batch.get("status") or "")
+    if mine and not profile.is_project_manager:
+        try:
+            resolved, total = batch_segment_progress(client, batch["id"], profile.id)
+        except Exception:
+            resolved, total = 0, 0
+        return {
+            "pair": label,
+            "batch": number,
+            "size": str(total),
+            "status": status,
+            "owner": owner_name,
+            "progress": f"{resolved} / {total}",
+            "action": "resume" if batch.get("status") == "active" else "view",
+            "_id": batch["id"],
+            "_mine": True,
+        }
+    return {
+        "pair": label,
+        "batch": number,
+        "size": "—" if planned_size is None else str(planned_size),
+        "status": status,
+        "owner": owner_name,
+        "progress": "—",
+        "action": "none",
+        "_id": batch["id"],
+        "_mine": False,
+    }
 
 
 def _render_table(client, rows: list[dict], key_prefix: str) -> None:

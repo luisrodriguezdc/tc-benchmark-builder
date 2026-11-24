@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from app.core.allocation import next_open_batch_number
 from app.core.auth import Profile
 from app.core.importer import parse_csv
 
@@ -302,6 +303,9 @@ class DemoStore:
         return sum(1 for s in segs if s["id"] not in assigned and s["id"] not in mine)
 
     def rpc_claim_batch(self, p_language_pair_id: str) -> str:
+        me = next((p for p in self.tables["profiles"] if p["id"] == self.current_user_id), None)
+        if me and me.get("role") == "project_manager":
+            raise RuntimeError("Project managers cannot claim a batch")
         if any(b["owner_id"] == self.current_user_id and b["status"] == "active" for b in self.tables["batches"]):
             raise RuntimeError("You already have an active batch")
         pair = next(p for p in self.tables["language_pairs"] if p["id"] == p_language_pair_id)
@@ -311,9 +315,10 @@ class DemoStore:
         take = segs[: int(pair.get("batch_size") or 10)]
         if not take:
             raise RuntimeError("No eligible segments available to claim for this language pair")
-        number = 1 + max(
-            (b["batch_number"] for b in self.tables["batches"] if b["language_pair_id"] == p_language_pair_id),
-            default=0,
+        number = next_open_batch_number(
+            b["batch_number"]
+            for b in self.tables["batches"]
+            if b["language_pair_id"] == p_language_pair_id
         )
         batch_id = _uid()
         self.tables["batches"].append(
@@ -456,12 +461,51 @@ class DemoStore:
         return sid
 
     def rpc_release_batch(self, p_batch_id: str) -> None:
-        for b in self.tables["batches"]:
-            if b["id"] == p_batch_id and b["status"] == "active":
-                b["status"] = "released"
-                b["released_at"] = _now()
-                return
-        raise RuntimeError("Active batch not found")
+        batch = next(
+            (
+                b
+                for b in self.tables["batches"]
+                if b["id"] == p_batch_id and b.get("status") in ("active", "released")
+            ),
+            None,
+        )
+        if batch is None:
+            raise RuntimeError("Active batch not found")
+        annotation_ids = {
+            row["id"] for row in self.tables["annotations"] if row.get("batch_id") == p_batch_id
+        }
+        self.tables["annotation_history"] = [
+            row
+            for row in self.tables["annotation_history"]
+            if row.get("annotation_id") not in annotation_ids
+        ]
+        self.tables["annotations"] = [
+            row for row in self.tables["annotations"] if row.get("batch_id") != p_batch_id
+        ]
+        self.tables["error_suggestions"] = [
+            row for row in self.tables["error_suggestions"] if row.get("batch_id") != p_batch_id
+        ]
+        item_ids = {row["id"] for row in self.tables["batch_items"] if row.get("batch_id") == p_batch_id}
+        self.tables["batch_item_candidates"] = [
+            row
+            for row in self.tables["batch_item_candidates"]
+            if row.get("batch_item_id") not in item_ids
+        ]
+        self.tables["batch_items"] = [
+            row for row in self.tables["batch_items"] if row.get("batch_id") != p_batch_id
+        ]
+        self.tables["batches"] = [row for row in self.tables["batches"] if row["id"] != p_batch_id]
+        self.tables["admin_audit_log"].append(
+            {
+                "id": _uid(),
+                "actor_id": self.current_user_id,
+                "action": "release_batch",
+                "entity": "batches",
+                "entity_id": p_batch_id,
+                "details": {},
+                "created_at": _now(),
+            }
+        )
 
     def rpc_reassign_batch(self, p_batch_id: str, p_new_owner: str) -> None:
         if any(b["owner_id"] == p_new_owner and b["status"] == "active" for b in self.tables["batches"]):

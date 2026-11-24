@@ -11,10 +11,14 @@ from app.core.exports import (
     fetch_suggestions,
     rows_to_csv,
 )
+from app.ui.components import render_header, render_page_title
+from app.ui import styles
 
 
 def render_exports(client) -> None:
-    st.subheader("Review and export")
+    styles.inject()
+    render_header()
+    render_page_title("Review and export", admin=True)
     pairs = client.table("language_pairs").select("id,source_lang,target_lang").execute().data or []
     datasets = client.table("datasets").select("id,name,version").execute().data or []
     profiles = client.table("profiles").select("id,display_name,email").execute().data or []

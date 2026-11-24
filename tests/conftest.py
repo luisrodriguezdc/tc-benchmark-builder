@@ -132,8 +132,17 @@ def database_url():
     pytest.skip("No DATABASE_URL, local Postgres (.pg), or Docker available.")
 
 
+def _is_local_database(url: str) -> bool:
+    from urllib.parse import urlparse
+
+    host = (urlparse(url).hostname or "").lower()
+    return host in {"localhost", "127.0.0.1", "::1"}
+
+
 @pytest.fixture(scope="session")
 def migrated_url(database_url):
+    if not _is_local_database(database_url):
+        pytest.skip("Refusing to rebuild a database that is not on this machine.")
     conn = _connect(database_url)
     conn.autocommit = True
     try:

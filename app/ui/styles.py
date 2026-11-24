@@ -3,7 +3,30 @@ CSS = """
 :root { --tcb-primary: #3697b3; --tcb-text: #31333f; --tcb-line: rgba(49, 51, 63, 0.2); }
 .block-container { padding-top: 1.15rem; padding-bottom: 4.5rem; max-width: 1100px; }
 .tcb-brand { margin: 0 0 0.4rem; line-height: 1.35; }
-.tcb-title { font-size: 1.35rem; font-weight: 700; margin-bottom: 0.35rem; line-height: 1.3; color: #1f2328; }
+.tcb-title { font-size: 1.85rem; font-weight: 700; margin-bottom: 0.35rem; line-height: 1.3; color: #1f2328; }
+.tcb-title-prominent { font-size: 1.85rem; }
+.tcb-sidebar-title {
+  color: #1f2328; font-weight: 700; font-size: 1.6rem; line-height: 1.25;
+  text-align: left; padding: 0.15rem 0.7rem 0.7rem; margin: 0;
+}
+[data-testid="stSidebarContent"] {
+  display: flex !important;
+  flex-direction: column;
+}
+[data-testid="stSidebarUserContent"] {
+  flex: 1 1 auto;
+  display: flex !important;
+  flex-direction: column;
+  min-height: 0;
+}
+[data-testid="stSidebarUserContent"] > [data-testid="stVerticalBlock"] {
+  flex: 1 1 auto;
+  display: flex !important;
+  flex-direction: column;
+}
+[data-testid="stSidebarUserContent"] .st-key-account_dock {
+  margin-top: auto !important;
+}
 .tcb-badge {
   display: inline-block; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.06em;
   text-transform: uppercase; background: #f6e28b; color: #5c4b12; border-radius: 999px;
@@ -127,39 +150,68 @@ div[data-testid="stSelectbox"] [data-baseweb="select"] input {
   justify-content: center !important;
   text-align: center !important;
 }
-[data-testid="stSidebar"]:has(.tcb-sidebar-push) [data-testid="stSidebarUserContent"] {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: calc(100vh - 2.5rem);
+.tcb-guide-h {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: #1f2328;
+  margin: 0.9rem 0 0.25rem;
 }
-[data-testid="stSidebar"]:has(.tcb-sidebar-push) [data-testid="stSidebarUserContent"] > div {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-  min-height: 100%;
+.stMarkdown p.tcb-guide-sub {
+  font-size: 1.62rem !important;
+  font-weight: 700 !important;
+  line-height: 1.3;
+  color: #1f2328 !important;
+  margin: 1.2rem 0 0.4rem;
 }
-[data-testid="stSidebar"]:has(.tcb-sidebar-push) [data-testid="stVerticalBlock"] {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-  min-height: 100%;
+.tcb-admin-chip {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: #e4e7eb;
+  color: #3d4450;
+  border-radius: 999px;
+  padding: 0.12rem 0.48rem;
+  vertical-align: middle;
+  margin-left: 0.4rem;
 }
-[data-testid="stSidebar"]:has(.tcb-sidebar-push) [data-testid="stElementContainer"]:has(.tcb-sidebar-push) {
-  margin-top: auto !important;
+[data-testid="stSidebar"] [class*="st-key-navbtn_"] button {
+  justify-content: flex-start !important;
+  text-align: left !important;
+  border: none !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  color: #1f2328 !important;
+  font-weight: 600 !important;
+  padding: 0.38rem 0.7rem !important;
+  min-height: 2.15rem !important;
+}
+[data-testid="stSidebar"] [class*="st-key-navbtn_"] button div,
+[data-testid="stSidebar"] [class*="st-key-navbtn_"] button span,
+[data-testid="stSidebar"] [class*="st-key-navbtn_"] button p {
+  justify-content: flex-start !important;
+  text-align: left !important;
+}
+[data-testid="stSidebar"] [class*="st-key-navbtn_"] button:hover {
+  background: #eef0f3 !important;
+  color: #1f2328 !important;
+  border: none !important;
+}
+[data-testid="stSidebar"] [class*="st-key-navbtn_"] button[data-testid="stBaseButton-primary"],
+[data-testid="stSidebar"] [class*="st-key-navbtn_"] button[data-testid="stBaseButton-primary"]:hover,
+[data-testid="stSidebar"] [class*="st-key-navbtn_"] button[data-testid="stBaseButton-primary"]:focus {
+  background: #e4e7eb !important;
+  color: #1f2328 !important;
+  border: none !important;
+}
+div[data-testid="stElementContainer"]:has(.tcb-auth-cookie) {
   height: 0 !important;
-  min-height: 0 !important;
-  margin-bottom: 0 !important;
+  margin: 0 !important;
   padding: 0 !important;
   overflow: hidden !important;
-}
-.tcb-sidebar-name {
-  font-weight: 700;
-  font-size: 0.95rem;
-  color: #1f2328;
-  line-height: 1.35;
-  padding: 0.75rem 0.15rem 0.35rem;
-  border-top: 1px solid rgba(49, 51, 63, 0.16);
 }
 </style>
 """

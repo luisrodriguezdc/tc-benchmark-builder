@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from typing import Any
 
 from supabase import Client
@@ -29,6 +30,68 @@ def list_language_pairs(client: Client, *, active_only: bool = True) -> list[dic
         q = q.eq("is_active", True)
     res = q.order("source_lang").execute()
     return res.data or []
+
+
+def next_open_batch_number(taken) -> int:
+    """Smallest batch number that is not already claimed.
+
+    A released batch is deleted, so its number is open again. A later batch
+    that is still claimed does not push the next claim past that gap.
+    """
+    used = {int(number) for number in taken if int(number) > 0}
+    number = 1
+    while number in used:
+        number += 1
+    return number
+
+
+def batch_slot_sizes(published: int, batch_size: int) -> list[int]:
+    """Planned batch sizes for a language. The last slot holds the remainder."""
+    if published <= 0 or batch_size <= 0:
+        return []
+    slots = math.ceil(published / batch_size)
+    sizes: list[int] = []
+    remaining = published
+    for index in range(slots):
+        size = batch_size if index < slots - 1 else remaining
+        sizes.append(size)
+        remaining -= size
+    return sizes
+
+
+def published_segment_counts(client: Client) -> dict[str, int]:
+    """Published segments per language pair.
+
+    The in-memory demo can see every row. A signed-in volunteer cannot:
+    segment rows outside their own batches are hidden. ``iaa_pair_stats`` is
+    the aggregate already granted to signed-in users, and its count is only
+    segments in published datasets that have a published candidate.
+    """
+    store = getattr(client, "_store", None)
+    if store is not None:
+        return _published_counts_from_tables(store.tables)
+    rows = client.table("iaa_pair_stats").select("language_pair_id,unique_segments").execute().data or []
+    return {str(row["language_pair_id"]): int(row.get("unique_segments") or 0) for row in rows}
+
+
+def _published_counts_from_tables(tables: dict[str, list]) -> dict[str, int]:
+    published_datasets = {
+        dataset["id"]: dataset["language_pair_id"]
+        for dataset in tables.get("datasets", [])
+        if dataset.get("status") == "published" and dataset.get("language_pair_id")
+    }
+    published_segments = {
+        candidate["segment_id"]
+        for candidate in tables.get("error_candidates", [])
+        if candidate.get("status") == "published" and candidate.get("segment_id")
+    }
+    counts: dict[str, int] = {}
+    for segment in tables.get("segments", []):
+        pair_id = published_datasets.get(segment.get("dataset_id"))
+        if pair_id and segment.get("id") in published_segments:
+            key = str(pair_id)
+            counts[key] = counts.get(key, 0) + 1
+    return counts
 
 
 def claimable_for_pair(client: Client, pair_id: str) -> int:

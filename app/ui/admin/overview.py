@@ -5,10 +5,14 @@ from __future__ import annotations
 import streamlit as st
 
 from app.core.allocation import pair_label
+from app.ui.components import render_header, render_page_title
+from app.ui import styles
 
 
 def render_overview(client) -> None:
-    st.subheader("Overview")
+    styles.inject()
+    render_header()
+    render_page_title("Dashboard")
     pairs = client.table("language_pairs").select("*").execute().data or []
     datasets = client.table("datasets").select("*").execute().data or []
     segments = client.table("segments").select("id,dataset_id").execute().data or []

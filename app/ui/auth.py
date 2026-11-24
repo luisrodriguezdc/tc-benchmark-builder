@@ -5,20 +5,21 @@ from __future__ import annotations
 import streamlit as st
 
 from app.core.auth import (
-    cookie_set_js,
+    cookie_clear_js,
     fetch_profile,
     restore_session,
     send_otp,
     verify_otp,
 )
-from app.core.constants import APP_TITLE
 from app.core.db import create_anon_client
 from app.ui import styles
 
 
 def render_login() -> None:
     styles.inject()
-    st.markdown(f"### {APP_TITLE}")
+    # Pop the flag before any widget. The clear script is rendered after the
+    # form so adding it cannot move the Send button and drop the click.
+    clear_cookies = st.session_state.pop("clear_auth_cookies", False)
     st.caption("Invitation-only. Use the email address Translation Commons invited.")
 
     if "otp_stage" not in st.session_state:
@@ -39,6 +40,8 @@ def render_login() -> None:
                 st.session_state.otp_stage = "code"
                 st.success("If this email is invited, a code was sent. Check your inbox.")
                 st.rerun()
+        if clear_cookies:
+            st.html(cookie_clear_js(), unsafe_allow_javascript=True)
         return
 
     token = st.text_input("One-time code", key="login_otp")
@@ -60,12 +63,13 @@ def render_login() -> None:
             st.session_state.client = client
             st.session_state.profile = profile
             st.session_state.page = "dashboard"
-            st.components.v1.html(cookie_set_js(access, refresh), height=0)
             st.rerun()
     with cols[1]:
         if st.button("Use a different email"):
             st.session_state.otp_stage = "email"
             st.rerun()
+    if clear_cookies:
+        st.html(cookie_clear_js(), unsafe_allow_javascript=True)
 
 
 def healthcheck() -> str | None:
