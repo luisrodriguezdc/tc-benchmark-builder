@@ -7,10 +7,14 @@ import streamlit as st
 from app.core.allocation import pair_label
 from app.core.importer import parse_csv, persist_import
 from app.core.store import SupabaseStore
+from app.ui.components import render_header, render_page_title
+from app.ui import styles
 
 
 def render_datasets(client) -> None:
-    st.subheader("Datasets")
+    styles.inject()
+    render_header()
+    render_page_title("Datasets", admin=True)
     store = SupabaseStore(client)
 
     st.markdown("##### Language pairs")

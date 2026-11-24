@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import unquote
 
 from supabase import Client
 
 from app.core.constants import COOKIE_ACCESS, COOKIE_REFRESH
+
+# Sliding lifetime of the browser session. Each signed-in page view refreshes it.
+SESSION_COOKIE_MAX_AGE = 60 * 60 * 24 * 14
 from app.core.db import create_anon_client, create_service_client
 
 
@@ -22,6 +27,10 @@ class Profile:
     @property
     def is_admin(self) -> bool:
         return self.role == "admin" and self.is_active
+
+    @property
+    def is_project_manager(self) -> bool:
+        return self.role == "project_manager" and self.is_active
 
 
 def send_otp(email: str) -> None:
@@ -74,26 +83,42 @@ def fetch_profile(client: Client) -> Profile | None:
     )
 
 
-def cookie_set_js(access_token: str, refresh_token: str) -> str:
-    # Prototype: tokens live in JS-writable cookies so Streamlit can restore
-    # across refresh. HttpOnly cookies cannot be set from component JS.
-    def _esc(value: str) -> str:
-        return value.replace("\\", "\\\\").replace("'", "\\'")
+def persisted_tokens(client: Client, access_token: str, refresh_token: str) -> tuple[str, str]:
+    """Return the session the client is actually using.
 
-    a = _esc(access_token)
-    r = _esc(refresh_token)
+    ``set_session`` refreshes an expired access token. The cookie must store
+    that new pair, not the expired access token that was just exchanged.
+    """
+    try:
+        session = client.auth.get_session()
+    except Exception:
+        session = None
+    access = getattr(session, "access_token", None) if session else None
+    refresh = getattr(session, "refresh_token", None) if session else None
+    if access and refresh:
+        return str(access), str(refresh)
+    return access_token, refresh_token
+
+
+def cookie_set_js(access_token: str, refresh_token: str) -> str:
+    """Write the user session onto the page that Streamlit is serving.
+
+    A component iframe cannot set a cookie the next full page load will send.
+    Values are encoded because a JWT contains ``=``.
+    """
+    payload = json.dumps(
+        {COOKIE_ACCESS: access_token, COOKIE_REFRESH: refresh_token}
+    ).replace("<", "\\u003c")
     return f"""
+<div class="tcb-auth-cookie" hidden></div>
 <script>
 (function() {{
-  const maxAge = 60 * 60 * 24 * 14;
+  const maxAge = {SESSION_COOKIE_MAX_AGE};
+  const items = {payload};
   const base = "; path=/; SameSite=Lax; max-age=" + maxAge;
-  try {{
-    window.parent.document.cookie = "{COOKIE_ACCESS}={a}" + base;
-    window.parent.document.cookie = "{COOKIE_REFRESH}={r}" + base;
-  }} catch (e) {{
-    document.cookie = "{COOKIE_ACCESS}={a}" + base;
-    document.cookie = "{COOKIE_REFRESH}={r}" + base;
-  }}
+  Object.keys(items).forEach(function(name) {{
+    document.cookie = name + "=" + encodeURIComponent(items[name]) + base;
+  }});
 }})();
 </script>
 """
@@ -101,19 +126,19 @@ def cookie_set_js(access_token: str, refresh_token: str) -> str:
 
 def cookie_clear_js() -> str:
     return f"""
+<div class="tcb-auth-cookie" hidden></div>
 <script>
 (function() {{
   const expire = "; path=/; SameSite=Lax; max-age=0";
-  try {{
-    window.parent.document.cookie = "{COOKIE_ACCESS}=" + expire;
-    window.parent.document.cookie = "{COOKIE_REFRESH}=" + expire;
-  }} catch (e) {{
-    document.cookie = "{COOKIE_ACCESS}=" + expire;
-    document.cookie = "{COOKIE_REFRESH}=" + expire;
-  }}
+  document.cookie = "{COOKIE_ACCESS}=" + expire;
+  document.cookie = "{COOKIE_REFRESH}=" + expire;
 }})();
 </script>
 """
+
+
+def decode_cookie_jar(raw: dict) -> dict[str, str]:
+    return {str(key): unquote(str(value)) for key, value in raw.items()}
 
 
 def cookies_from_streamlit() -> dict[str, str]:
@@ -124,8 +149,10 @@ def cookies_from_streamlit() -> dict[str, str]:
         if raw is None:
             return {}
         if hasattr(raw, "to_dict"):
-            return {str(k): str(v) for k, v in raw.to_dict().items()}
-        return {str(k): str(v) for k, v in dict(raw).items()}
+            items = raw.to_dict().items()
+        else:
+            items = dict(raw).items()
+        return decode_cookie_jar(dict(items))
     except Exception:
         return {}
 

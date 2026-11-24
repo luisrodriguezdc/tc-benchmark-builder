@@ -2,61 +2,93 @@
 
 from __future__ import annotations
 
+import html
+
 import streamlit as st
 
-from app.core.auth import Profile, cookie_clear_js
-from app.core.constants import APP_TITLE, HOWTO_DEMO_INTRO, HOWTO_GUIDE, HOWTO_GUIDE_DEMO_SAVE
+from app.core.auth import Profile
+from app.core.constants import APP_TITLE
 from app.core.demo import demo_enabled
 from app.core.spans import region_of, render_highlighted_html
 
+NAV_EMOJI = {
+    "Welcome": "👋",
+    "Annotation Guide": "📖",
+    "Workspace": "✏️",
+    "Dashboard": "📊",
+    "Datasets": "📁",
+    "Volunteers": "👥",
+    "Review & export": "📤",
+}
 
-def _howto_markdown() -> str:
-    if not demo_enabled():
-        return HOWTO_GUIDE
-    body = HOWTO_GUIDE.replace(
-        "Work is saved to the server. Use **Save** if a network error appears.",
-        HOWTO_GUIDE_DEMO_SAVE,
+
+def render_sidebar_nav(options: list[str]) -> str:
+    """Vertical nav. The selected row is a rounded light-gray bar, with no radio control."""
+    if st.session_state.get("prod_nav") not in options:
+        st.session_state.prod_nav = "Workspace"
+    choice = st.session_state.prod_nav
+    with st.sidebar:
+        st.markdown(
+            f'<p class="tcb-sidebar-title">{html.escape(APP_TITLE)}</p>',
+            unsafe_allow_html=True,
+        )
+        nav = st.container(gap="xxsmall", border=False)
+        for label in options:
+            slug = label.lower().replace(" & ", "_").replace(" ", "_")
+            if nav.button(
+                label,
+                key=f"navbtn_{slug}",
+                icon=NAV_EMOJI[label],
+                type="primary" if label == choice else "tertiary",
+                width="stretch",
+            ):
+                if label != choice:
+                    st.session_state.prod_nav = label
+                    st.rerun()
+    return choice
+
+
+def render_page_title(title: str, *, admin: bool = False, prominent: bool = False) -> None:
+    chip = '<span class="tcb-admin-chip">Admin</span>' if admin else ""
+    gap = " " if admin else ""
+    klass = "tcb-title tcb-title-prominent" if prominent else "tcb-title"
+    st.markdown(
+        f'<div class="{klass}">{html.escape(title)}{gap}{chip}</div>',
+        unsafe_allow_html=True,
     )
-    return HOWTO_DEMO_INTRO + "\n\n" + body
 
 
 def _logout() -> None:
-    st.components.v1.html(cookie_clear_js(), height=0)
+    if not demo_enabled():
+        client = st.session_state.get("client")
+        if client is not None:
+            try:
+                client.auth.sign_out({"scope": "local"})
+            except Exception:
+                pass
     for key in list(st.session_state.keys()):
         del st.session_state[key]
+    if not demo_enabled():
+        st.session_state.clear_auth_cookies = True
     st.rerun()
 
 
 def render_account_menu(profile: Profile) -> None:
     with st.sidebar:
-        with st.popover(profile.display_name, icon=":material/account_circle:"):
-            st.caption(profile.email)
-            if st.button("Log out", key="logout", width="stretch"):
-                _logout()
+        with st.container(key="account_dock"):
+            with st.popover(profile.display_name, icon=":material/account_circle:"):
+                st.caption(profile.email)
+                if st.button("Log out", key="logout", width="stretch"):
+                    _logout()
 
 
 def render_header() -> None:
-    badge = ' <span class="tcb-badge">Demo</span>' if demo_enabled() else ""
+    if not demo_enabled():
+        return
     st.markdown(
-        f'<div class="tcb-brand"><span class="tcb-title">{APP_TITLE}</span>{badge}</div>',
+        '<div class="tcb-brand"><span class="tcb-badge">Demo</span></div>',
         unsafe_allow_html=True,
     )
-    # The public demo keeps the guide in the page. Production opens it from the sidebar.
-    if demo_enabled():
-        with st.expander("How To Guide", expanded=False):
-            st.markdown(_howto_markdown())
-
-
-def render_production_account(profile: Profile) -> None:
-    """Signed-in name pinned to the bottom of the production sidebar."""
-    import html
-
-    name = html.escape(profile.display_name or profile.email)
-    with st.sidebar:
-        st.markdown('<div class="tcb-sidebar-push"></div>', unsafe_allow_html=True)
-        if st.button("Log out", key="logout"):
-            _logout()
-        st.markdown(f'<div class="tcb-sidebar-name">{name}</div>', unsafe_allow_html=True)
 
 
 def render_segment_banner(

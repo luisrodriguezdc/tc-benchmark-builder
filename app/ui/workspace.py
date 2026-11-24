@@ -141,7 +141,7 @@ def render_workspace(client, profile: Profile) -> None:
         data = load_workspace(client, batch_id, profile.id)
     except Exception as exc:
         st.error(f"Could not load batch: {exc}")
-        if st.button("← Batches"):
+        if st.button("← Workspace"):
             st.session_state.page = "dashboard"
             st.rerun()
         return
@@ -151,7 +151,7 @@ def render_workspace(client, profile: Profile) -> None:
     lp = batch.get("language_pairs") or {}
     render_header()
 
-    if st.button("← Batches"):
+    if st.button("← Workspace"):
         st.session_state.page = "dashboard"
         st.rerun()
     st.caption(

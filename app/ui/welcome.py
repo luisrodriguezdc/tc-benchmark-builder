@@ -2,37 +2,61 @@
 
 from __future__ import annotations
 
+import html
+
 import streamlit as st
 
 from app.core.auth import Profile
-from app.core.constants import HOWTO_GUIDE
-from app.ui.components import render_header
+from app.core.constants import HOWTO_DEMO_INTRO, HOWTO_GUIDE, HOWTO_GUIDE_DEMO_SAVE, WELCOME_COPY
+from app.core.demo import demo_enabled
+from app.ui.components import render_header, render_page_title
 from app.ui import styles
 
 
 def render_welcome(profile: Profile) -> None:
+    del profile
     styles.inject()
     render_header()
-    name = profile.display_name or profile.email
-    st.markdown('<div class="tcb-title">Welcome</div>', unsafe_allow_html=True)
-    st.markdown(f"Hello, **{name}**.")
-    st.markdown(
-        "This workspace is where Translation Commons linguists check synthetic "
-        "translation errors. Each card should contain exactly one intended error."
-    )
-    st.markdown(
-        """
-1. Open **How To Guide** for the validate, edit, and reject rules.
-2. Open **Dashboard** to see every language batch and its status.
-3. **Claim This Batch** is shown for languages an admin assigned to you. You can hold one active batch at a time.
-        """.strip()
-    )
-    if profile.is_admin:
-        st.caption("This account is an admin. Dataset, volunteer, and export pages are in the left navigation.")
+    render_page_title("Welcome", prominent=True)
+    body = WELCOME_COPY
+    if demo_enabled():
+        body = body.replace(
+            "Work is saved to the server. Use Save if a network error appears.",
+            HOWTO_GUIDE_DEMO_SAVE,
+        )
+    st.markdown(_guide_subtitles(body), unsafe_allow_html=True)
+
+
+_SUBTITLES = {
+    "Help Build Better Tools for Translators!",
+    "Why are we building a custom benchmark?",
+    "How you can help!",
+    "How to Use the Interface",
+    "Error Types",
+    "Error Severity",
+    "General Rules",
+    "Independence",
+}
+
+
+def _guide_subtitles(body: str) -> str:
+    lines = []
+    for line in body.splitlines():
+        if line.startswith("### "):
+            raw = line[4:].strip()
+            text = html.escape(raw)
+            klass = "tcb-guide-sub" if raw in _SUBTITLES else "tcb-guide-h"
+            lines.append(f'<p class="{klass}">{text}</p>')
+        else:
+            lines.append(line)
+    return "\n".join(lines)
 
 
 def render_howto() -> None:
     styles.inject()
     render_header()
-    st.markdown('<div class="tcb-title">How To Guide</div>', unsafe_allow_html=True)
-    st.markdown(HOWTO_GUIDE)
+    render_page_title("Annotation Guide", prominent=True)
+    body = HOWTO_GUIDE
+    if demo_enabled():
+        body = HOWTO_DEMO_INTRO + "\n\n" + body
+    st.markdown(_guide_subtitles(body), unsafe_allow_html=True)

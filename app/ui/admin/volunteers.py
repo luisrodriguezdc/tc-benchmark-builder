@@ -6,6 +6,8 @@ import streamlit as st
 
 from app.core.allocation import pair_label
 from app.core.auth import invite_user
+from app.ui.components import render_header, render_page_title
+from app.ui import styles
 
 
 def _pair_option(pair: dict) -> str:
@@ -16,7 +18,9 @@ def _pair_option(pair: dict) -> str:
 
 
 def render_volunteers(client) -> None:
-    st.subheader("Volunteers")
+    styles.inject()
+    render_header()
+    render_page_title("Volunteers", admin=True)
     profiles = (
         client.table("profiles")
         .select("*")
@@ -59,7 +63,15 @@ def render_volunteers(client) -> None:
     st.markdown("##### Invite")
     email = st.text_input("Email")
     name = st.text_input("Display name")
-    role = st.selectbox("Role", ["translator", "admin"])
+    role = st.selectbox(
+        "Role",
+        ["translator", "project_manager", "admin"],
+        format_func=lambda value: {
+            "translator": "Translator",
+            "project_manager": "Project Manager",
+            "admin": "Admin",
+        }[value],
+    )
     if st.button("Invite user"):
         try:
             invite_user(email, name, role)
@@ -75,7 +87,7 @@ def render_volunteers(client) -> None:
     pick = st.selectbox("Select user", [f"{p['display_name']} <{p['email']}>" for p in profiles])
     user = next(p for p in profiles if f"{p['display_name']} <{p['email']}>" == pick)
 
-    c1, c2, c3, c4 = st.columns(4)
+    c1, c2, c3, c4, c5 = st.columns(5)
     if c1.button("Deactivate"):
         try:
             client.table("profiles").update({"is_active": False}).eq("id", user["id"]).execute()
@@ -94,6 +106,12 @@ def render_volunteers(client) -> None:
     if c4.button("Demote to translator"):
         try:
             client.table("profiles").update({"role": "translator"}).eq("id", user["id"]).execute()
+            st.rerun()
+        except Exception as exc:
+            st.error(str(exc))
+    if c5.button("Set as project manager"):
+        try:
+            client.table("profiles").update({"role": "project_manager"}).eq("id", user["id"]).execute()
             st.rerun()
         except Exception as exc:
             st.error(str(exc))
@@ -135,26 +153,34 @@ def render_volunteers(client) -> None:
     st.markdown("##### Batches for this user")
     mine = [b for b in batches if b["owner_id"] == user["id"]]
     st.dataframe(mine, hide_index=True, use_container_width=True)
-    active = [b for b in mine if b["status"] == "active"]
-    if active:
-        bid = st.selectbox("Active batch", [b["id"] for b in active])
+    releasable = [b for b in mine if b["status"] in ("active", "released")]
+    if releasable:
+        bid = st.selectbox(
+            "Batch to release",
+            [b["id"] for b in releasable],
+            format_func=lambda value: next(
+                f"Batch {b['batch_number']} ({b['status']})" for b in releasable if b["id"] == value
+            ),
+        )
+        chosen = next(b for b in releasable if b["id"] == bid)
         r1, r2 = st.columns(2)
-        if r1.button("Release abandoned batch"):
+        if r1.button("Release batch"):
             try:
                 client.rpc("release_batch", {"p_batch_id": bid}).execute()
-                st.success("Released. Completed annotations were kept.")
+                st.success("Released. The batch is unclaimed and its annotations were removed.")
                 st.rerun()
             except Exception as exc:
                 st.error(str(exc))
-        new_owner = st.selectbox(
-            "Reassign to",
-            ["—"] + [f"{p['display_name']} <{p['email']}>" for p in profiles if p["id"] != user["id"]],
-        )
-        if r2.button("Reassign") and new_owner != "—":
-            target = next(p for p in profiles if f"{p['display_name']} <{p['email']}>" == new_owner)
-            try:
-                client.rpc("reassign_batch", {"p_batch_id": bid, "p_new_owner": target["id"]}).execute()
-                st.success("Reassigned.")
-                st.rerun()
-            except Exception as exc:
-                st.error(str(exc))
+        if chosen["status"] == "active":
+            new_owner = st.selectbox(
+                "Reassign to",
+                ["—"] + [f"{p['display_name']} <{p['email']}>" for p in profiles if p["id"] != user["id"]],
+            )
+            if r2.button("Reassign") and new_owner != "—":
+                target = next(p for p in profiles if f"{p['display_name']} <{p['email']}>" == new_owner)
+                try:
+                    client.rpc("reassign_batch", {"p_batch_id": bid, "p_new_owner": target["id"]}).execute()
+                    st.success("Reassigned.")
+                    st.rerun()
+                except Exception as exc:
+                    st.error(str(exc))
