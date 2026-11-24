@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from app.core.auth import (
     SESSION_COOKIE_MAX_AGE,
     cookie_clear_js,
@@ -9,7 +11,13 @@ from app.core.auth import (
     decode_cookie_jar,
     persisted_tokens,
 )
-from app.core.constants import COOKIE_ACCESS, COOKIE_REFRESH
+from app.core.constants import APP_TITLE, COOKIE_ACCESS, COOKIE_REFRESH
+
+
+def test_login_page_shows_the_app_title():
+    source = Path(__file__).resolve().parents[1].joinpath("app/ui/auth.py").read_text(encoding="utf-8")
+    assert f'st.markdown(f"### {{APP_TITLE}}")' in source
+    assert APP_TITLE == "Translation Commons Benchmark Builder"
 
 
 def test_session_cookie_is_written_on_the_page():

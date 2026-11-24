@@ -11,6 +11,7 @@ from app.core.auth import (
     send_otp,
     verify_otp,
 )
+from app.core.constants import APP_TITLE
 from app.core.db import create_anon_client
 from app.ui import styles
 
@@ -20,6 +21,7 @@ def render_login() -> None:
     # Pop the flag before any widget. The clear script is rendered after the
     # form so adding it cannot move the Send button and drop the click.
     clear_cookies = st.session_state.pop("clear_auth_cookies", False)
+    st.markdown(f"### {APP_TITLE}")
     st.caption("Invitation-only. Use the email address Translation Commons invited.")
 
     if "otp_stage" not in st.session_state:
